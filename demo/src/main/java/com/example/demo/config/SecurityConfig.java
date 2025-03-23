@@ -30,25 +30,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(authorize -> authorize
-                // Cho phép truy cập không cần xác thực vào các endpoint API-docs và Swagger UI
-                .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                // Cho phép truy cập không cần xác thực vào các endpoint để kiểm tra health của ứng dụng
-                .requestMatchers("/actuator/**", "/health/**").permitAll()
-                // Cho phép truy cập không cần xác thực vào các endpoint xác thực
-                .requestMatchers("/auth/**").permitAll()
-                // Các endpoint còn lại yêu cầu xác thực
-                .anyRequest().authenticated()
-            )
-            .userDetailsService(userDetailsService)
-            .formLogin(form -> form
-                .loginPage("/auth/login")
-                .defaultSuccessUrl("/")
-                .permitAll()
-            )
-            .logout(logout -> logout
-                .logoutUrl("/auth/logout")
-                .logoutSuccessUrl("/auth/login")
-                .permitAll()
+                .anyRequest().permitAll()
             );
         
         return http.build();
