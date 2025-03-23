@@ -1,10 +1,13 @@
 package com.example.demo.config;
 
+import com.example.demo.security.UserDetailsServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -18,6 +21,9 @@ import java.util.Arrays;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    @Autowired
+    private UserDetailsServiceImpl userDetailsService;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -28,14 +34,29 @@ public class SecurityConfig {
                 .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                 // Cho phép truy cập không cần xác thực vào các endpoint để kiểm tra health của ứng dụng
                 .requestMatchers("/actuator/**", "/health/**").permitAll()
-                // Ứng dụng của bạn có thể cần các endpoint public khác
-                .requestMatchers("/api/auth/**").permitAll()
+                // Cho phép truy cập không cần xác thực vào các endpoint xác thực
+                .requestMatchers("/auth/**").permitAll()
                 // Các endpoint còn lại yêu cầu xác thực
                 .anyRequest().authenticated()
             )
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+            .userDetailsService(userDetailsService)
+            .formLogin(form -> form
+                .loginPage("/auth/login")
+                .defaultSuccessUrl("/")
+                .permitAll()
+            )
+            .logout(logout -> logout
+                .logoutUrl("/auth/logout")
+                .logoutSuccessUrl("/auth/login")
+                .permitAll()
+            );
         
         return http.build();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+        return authConfig.getAuthenticationManager();
     }
 
     @Bean
