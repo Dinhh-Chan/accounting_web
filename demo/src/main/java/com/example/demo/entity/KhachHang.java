@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -46,9 +47,9 @@ public class KhachHang {
     @Column(name = "PhanLoai", length = 50)
     private String phanLoai;
 
-    // @OneToMany(mappedBy = "khachHang", cascade = CascadeType.ALL)
-    // private List<HoaDon> hoaDons;
+    @OneToMany(mappedBy = "khachHang", cascade = CascadeType.ALL)
+    private List<HoaDon> hoaDons = new ArrayList<>();
 
-    // @OneToMany(mappedBy = "khachHang", cascade = CascadeType.ALL)
-    // private List<PhieuGiamGia> phieuGiamGias;
+    @OneToMany(mappedBy = "khachHang", cascade = CascadeType.ALL)
+    private List<PhieuGiamGia> phieuGiamGias = new ArrayList<>();
 }
