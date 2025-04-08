@@ -22,7 +22,7 @@ class CRUDPhieuGiamGia(CRUDBase[PhieuGiamGia, PhieuGiamGiaCreate, PhieuGiamGiaUp
         Returns:
             The voucher if found, None otherwise
         """
-        query = select(self.model).where(self.model.SoPhieu == so_phieu)
+        query = select(self.model).where(self.model.sophieu == so_phieu)
         result = await db.execute(query)
         return result.scalars().first()
     
@@ -37,7 +37,7 @@ class CRUDPhieuGiamGia(CRUDBase[PhieuGiamGia, PhieuGiamGiaCreate, PhieuGiamGiaUp
         Returns:
             True if the voucher exists, False otherwise
         """
-        query = select(self.model).where(self.model.SoPhieu == so_phieu)
+        query = select(self.model).where(self.model.sophieu == so_phieu)
         result = await db.execute(query)
         return result.scalars().first() is not None
     
@@ -52,7 +52,7 @@ class CRUDPhieuGiamGia(CRUDBase[PhieuGiamGia, PhieuGiamGiaCreate, PhieuGiamGiaUp
             Next available voucher ID (PG0001, PG0002, etc.)
         """
         # Find the max ID
-        query = select(func.max(self.model.SoPhieu)).where(self.model.SoPhieu.like("PG%"))
+        query = select(func.max(self.model.sophieu)).where(self.model.sophieu.like("PG%"))
         result = await db.execute(query)
         max_id = result.scalar()
         
@@ -75,7 +75,7 @@ class CRUDPhieuGiamGia(CRUDBase[PhieuGiamGia, PhieuGiamGiaCreate, PhieuGiamGiaUp
             Dict with voucher and its line items if found, None otherwise
         """
         # Get the voucher
-        voucher_query = select(self.model).where(self.model.SoPhieu == so_phieu)
+        voucher_query = select(self.model).where(self.model.sophieu == so_phieu)
         voucher_result = await db.execute(voucher_query)
         voucher = voucher_result.scalars().first()
         
@@ -83,7 +83,7 @@ class CRUDPhieuGiamGia(CRUDBase[PhieuGiamGia, PhieuGiamGiaCreate, PhieuGiamGiaUp
             return None
         
         # Get the line items
-        items_query = select(CTPhieu).where(CTPhieu.SoPhieu == so_phieu)
+        items_query = select(CTPhieu).where(CTPhieu.sophieu == so_phieu)
         items_result = await db.execute(items_query)
         items = items_result.scalars().all()
         
@@ -112,7 +112,7 @@ class CRUDPhieuGiamGia(CRUDBase[PhieuGiamGia, PhieuGiamGiaCreate, PhieuGiamGiaUp
         
         # Create voucher without line items
         obj_in_data = obj_in.dict(exclude={"chi_tiet"})
-        db_obj = PhieuGiamGia(SoPhieu=so_phieu, **obj_in_data)
+        db_obj = PhieuGiamGia(sophieu=so_phieu, **obj_in_data)
         
         # Add to session
         db.add(db_obj)
@@ -120,7 +120,7 @@ class CRUDPhieuGiamGia(CRUDBase[PhieuGiamGia, PhieuGiamGiaCreate, PhieuGiamGiaUp
         # Create line items
         for item in chi_tiet_data:
             item_data = item.dict()
-            db_item = CTPhieu(SoPhieu=so_phieu, **item_data)
+            db_item = CTPhieu(sophieu=so_phieu, **item_data)
             db.add(db_item)
         
         # Commit all changes
@@ -140,7 +140,7 @@ class CRUDPhieuGiamGia(CRUDBase[PhieuGiamGia, PhieuGiamGiaCreate, PhieuGiamGiaUp
         Returns:
             List of vouchers for the customer
         """
-        query = select(self.model).where(self.model.MaKH == ma_kh).order_by(self.model.NgayLap.desc())
+        query = select(self.model).where(self.model.makh == ma_kh).order_by(self.model.ngaylap.desc())
         result = await db.execute(query)
         return result.scalars().all()
     
@@ -155,7 +155,7 @@ class CRUDPhieuGiamGia(CRUDBase[PhieuGiamGia, PhieuGiamGiaCreate, PhieuGiamGiaUp
         Returns:
             List of vouchers for the invoice
         """
-        query = select(self.model).where(self.model.SoCT == so_ct).order_by(self.model.NgayLap)
+        query = select(self.model).where(self.model.soct == so_ct).order_by(self.model.ngaylap)
         result = await db.execute(query)
         return result.scalars().all()
     
@@ -178,11 +178,11 @@ class CRUDPhieuGiamGia(CRUDBase[PhieuGiamGia, PhieuGiamGiaCreate, PhieuGiamGiaUp
         """
         query = select(self.model).where(
             between(
-                func.date(self.model.NgayLap),
+                func.date(self.model.ngaylap),
                 start_date,
                 end_date
             )
-        ).order_by(self.model.NgayLap)
+        ).order_by(self.model.ngaylap)
         
         result = await db.execute(query)
         return result.scalars().all()
@@ -205,22 +205,22 @@ class CRUDPhieuGiamGia(CRUDBase[PhieuGiamGia, PhieuGiamGiaCreate, PhieuGiamGiaUp
             List of dicts with customer info and discount amounts
         """
         query = select(
-            self.model.MaKH,
-            func.max(self.model.TenKH).label("TenKH"),
-            func.sum(self.model.TienDT).label("total_discount"),
-            func.sum(self.model.TienThue).label("total_tax"),
-            func.sum(self.model.TienTT).label("total_amount"),
-            func.count(self.model.SoPhieu).label("voucher_count")
+            self.model.makh,
+            func.max(self.model.tenkh).label("tenkh"),
+            func.sum(self.model.tiendt).label("total_discount"),
+            func.sum(self.model.tienthue).label("total_tax"),
+            func.sum(self.model.tientt).label("total_amount"),
+            func.count(self.model.sophieu).label("voucher_count")
         ).where(
             between(
-                func.date(self.model.NgayLap),
+                func.date(self.model.ngaylap),
                 start_date,
                 end_date
             )
         ).group_by(
-            self.model.MaKH
+            self.model.makh
         ).order_by(
-            func.sum(self.model.TienDT).desc()
+            func.sum(self.model.tiendt).desc()
         )
         
         result = await db.execute(query)
@@ -244,22 +244,22 @@ class CRUDPhieuGiamGia(CRUDBase[PhieuGiamGia, PhieuGiamGiaCreate, PhieuGiamGiaUp
             List of dicts with product info and discount amounts
         """
         query = select(
-            CTPhieu.MaSPDV,
-            func.sum(CTPhieu.SoLuong * CTPhieu.DonGia).label("total_discount"),
-            func.sum(CTPhieu.SoLuong).label("total_quantity")
+            CTPhieu.maspdv,
+            func.sum(CTPhieu.soluong * CTPhieu.dongia).label("total_discount"),
+            func.sum(CTPhieu.soluong).label("total_quantity")
         ).join(
             self.model,
-            CTPhieu.SoPhieu == self.model.SoPhieu
+            CTPhieu.sophieu == self.model.sophieu
         ).where(
             between(
-                func.date(self.model.NgayLap),
+                func.date(self.model.ngaylap),
                 start_date,
                 end_date
             )
         ).group_by(
-            CTPhieu.MaSPDV
+            CTPhieu.maspdv
         ).order_by(
-            func.sum(CTPhieu.SoLuong * CTPhieu.DonGia).desc()
+            func.sum(CTPhieu.soluong * CTPhieu.dongia).desc()
         )
         
         result = await db.execute(query)
@@ -283,13 +283,13 @@ class CRUDPhieuGiamGia(CRUDBase[PhieuGiamGia, PhieuGiamGiaCreate, PhieuGiamGiaUp
             Dict with total discount, tax, and amount
         """
         query = select(
-            func.sum(self.model.TienDT).label("total_discount"),
-            func.sum(self.model.TienThue).label("total_tax"),
-            func.sum(self.model.TienTT).label("total_amount"),
-            func.count(self.model.SoPhieu).label("voucher_count")
+            func.sum(self.model.tiendt).label("total_discount"),
+            func.sum(self.model.tienthue).label("total_tax"),
+            func.sum(self.model.tientt).label("total_amount"),
+            func.count(self.model.sophieu).label("voucher_count")
         ).where(
             between(
-                func.date(self.model.NgayLap),
+                func.date(self.model.ngaylap),
                 start_date,
                 end_date
             )

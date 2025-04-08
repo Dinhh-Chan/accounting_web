@@ -19,7 +19,7 @@ class CRUDSPDV(CRUDBase[SPDV, SPDVCreate, SPDVUpdate]):
         Returns:
             The product/service if found, None otherwise
         """
-        query = select(self.model).where(self.model.MaSPDV == ma_spdv)
+        query = select(self.model).where(self.model.maspdv == ma_spdv)
         result = await db.execute(query)
         return result.scalars().first()
     
@@ -34,7 +34,7 @@ class CRUDSPDV(CRUDBase[SPDV, SPDVCreate, SPDVUpdate]):
         Returns:
             True if the product/service exists, False otherwise
         """
-        query = select(self.model).where(self.model.MaSPDV == ma_spdv)
+        query = select(self.model).where(self.model.maspdv == ma_spdv)
         result = await db.execute(query)
         return result.scalars().first() is not None
     
@@ -49,7 +49,7 @@ class CRUDSPDV(CRUDBase[SPDV, SPDVCreate, SPDVUpdate]):
             Next available product/service ID (SP0001, SP0002, etc.)
         """
         # Find the max ID
-        query = select(func.max(self.model.MaSPDV)).where(self.model.MaSPDV.like("SP%"))
+        query = select(func.max(self.model.maspdv)).where(self.model.maspdv.like("SP%"))
         result = await db.execute(query)
         max_id = result.scalar()
         
@@ -78,7 +78,7 @@ class CRUDSPDV(CRUDBase[SPDV, SPDVCreate, SPDVUpdate]):
         obj_in_data = obj_in.dict()
         
         # Create model instance
-        db_obj = SPDV(MaSPDV=ma_spdv, **obj_in_data)
+        db_obj = SPDV(maspdv=ma_spdv, **obj_in_data)
         
         # Add to session and commit
         db.add(db_obj)
@@ -109,8 +109,8 @@ class CRUDSPDV(CRUDBase[SPDV, SPDVCreate, SPDVUpdate]):
         """
         search_term = f"%{keyword}%"
         query = select(self.model).where(
-            (self.model.TenSPDV.ilike(search_term)) |
-            (self.model.MoTa.ilike(search_term))
+            (self.model.tenspdv.ilike(search_term)) |
+            (self.model.mota.ilike(search_term))
         ).offset(skip).limit(limit)
         
         result = await db.execute(query)

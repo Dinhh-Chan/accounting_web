@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import users, auth, hoadon, khachhang,banggia, ct_hoadon , ct_phieu
+from app.api.v1.endpoints import users, auth, hoadon, khachhang,banggia, ct_hoadon , ct_phieu, dinhmucck,phieugiamgia,spdv,tkkt
 
 api_router = APIRouter()
 
@@ -12,5 +12,12 @@ api_router.include_router(khachhang.router, prefix="/khachhang", tags= ["khachha
 api_router.include_router(banggia.router, prefix="/banggia", tags= ["banggia"])
 api_router.include_router(ct_hoadon.router, prefix="/ct_hoadon", tags= ["ct_hoadon"])
 api_router.include_router(ct_phieu.router, prefix="/ct_phieu", tags= ["ct_phieu"])
+api_router.include_router(dinhmucck.router, prefix="/dinhmucck", tags= ["dinhmucck"])
+api_router.include_router(phieugiamgia.router, prefix="/phieugiamgia", tags= ["phieugiamgia"])
+api_router.include_router(spdv.router, prefix="/spdv", tags= ["spdv"])
+
+api_router.include_router(tkkt.router, prefix="/tkkt", tags= ["tkkt"])
+
+
 
 

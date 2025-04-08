@@ -28,8 +28,8 @@ class CRUDDinhMucCK(CRUDBase[DinhMucCK, DinhMucCKCreate, DinhMucCKUpdate]):
         """
         query = select(self.model).where(
             and_(
-                self.model.MaSPDV == ma_spdv,
-                self.model.NgayHL == ngay_hl
+                self.model.maspdv == ma_spdv,
+                self.model.ngayhl == ngay_hl
             )
         )
         result = await db.execute(query)
@@ -50,7 +50,7 @@ class CRUDDinhMucCK(CRUDBase[DinhMucCK, DinhMucCKCreate, DinhMucCKUpdate]):
         Returns:
             List of discount entries for the product
         """
-        query = select(self.model).where(self.model.MaSPDV == ma_spdv).order_by(self.model.NgayHL.desc())
+        query = select(self.model).where(self.model.maspdv == ma_spdv).order_by(self.model.ngayhl.desc())
         result = await db.execute(query)
         return result.scalars().all()
     
@@ -79,18 +79,18 @@ class CRUDDinhMucCK(CRUDBase[DinhMucCK, DinhMucCKCreate, DinhMucCKUpdate]):
         # Base query for finding entries effective on or before the given date
         query = select(self.model).where(
             and_(
-                self.model.MaSPDV == ma_spdv,
-                self.model.NgayHL <= date
+                self.model.maspdv == ma_spdv,
+                self.model.ngayhl <= date
             )
         )
         
         # If amount is provided, find discounts applicable at that amount
         if amount is not None:
-            query = query.where(self.model.MucTien <= amount)
+            query = query.where(self.model.muctien <= amount)
             
         # Order by date (most recent first) and threshold amount (highest first)
         # This gets the most recent discount with the highest applicable threshold
-        query = query.order_by(self.model.NgayHL.desc(), self.model.MucTien.desc())
+        query = query.order_by(self.model.ngayhl.desc(), self.model.muctien.desc())
         
         result = await db.execute(query)
         return result.scalars().first()

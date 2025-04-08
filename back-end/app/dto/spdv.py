@@ -1,17 +1,17 @@
 from typing import Optional
 from datetime import datetime
 from decimal import Decimal
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, condecimal
 
 
 # Shared properties
 class SPDVBase(BaseModel):
-    TenSPDV: str = Field(..., description="Tên sản phẩm dịch vụ", example="Phần mềm quản lý bán hàng")
-    DonGia: Decimal = Field(..., description="Đơn giá", example=10000000.00)
-    DVT: str = Field(..., description="Đơn vị tính", example="Bản")
-    MoTa: Optional[str] = Field(None, description="Mô tả", example="Phần mềm quản lý bán hàng cho mảng phân phối đại lý")
+    tenspdv: str = Field(..., description="Tên sản phẩm dịch vụ", example="Phần mềm quản lý bán hàng")
+    dongia: condecimal(ge=0) = Field(..., description="Đơn giá", example=10000000.00)
+    dvt: str = Field(..., description="Đơn vị tính", example="Bản")
+    mota: Optional[str] = Field(None, description="Mô tả", example="Phần mềm quản lý bán hàng cho mảng phân phối đại lý")
     
-    @validator('DonGia')
+    @validator('dongia')
     def validate_dongia(cls, v):
         if v <= 0:
             raise ValueError('Đơn giá phải lớn hơn 0')
@@ -24,20 +24,21 @@ class SPDVCreate(SPDVBase):
 
 
 # Properties to receive on SPDV update
-class SPDVUpdate(SPDVBase):
-    TenSPDV: Optional[str] = None
-    DonGia: Optional[Decimal] = None
-    DVT: Optional[str] = None
+class SPDVUpdate(BaseModel):
+    tenspdv: Optional[str] = None
+    dongia: Optional[condecimal(ge=0)] = None
+    dvt: Optional[str] = None
+    mota: Optional[str] = None
 
 
 # Properties shared by models stored in DB
 class SPDVInDBBase(SPDVBase):
-    MaSPDV: str
+    maspdv: str
     created_at: datetime
     updated_at: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Properties to return to client

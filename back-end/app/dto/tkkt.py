@@ -5,10 +5,10 @@ from pydantic import BaseModel, Field, validator
 
 # Shared properties
 class TKKTBase(BaseModel):
-    TenTK: str = Field(..., description="Tên tài khoản kế toán", example="Doanh thu bán hàng")
-    CapTK: int = Field(..., description="Cấp tài khoản", example=1, ge=1, le=5)
+    tentk: str = Field(..., description="Tên tài khoản kế toán", example="Doanh thu bán hàng")
+    captk: int = Field(..., description="Cấp tài khoản", example=1, ge=1, le=5)
     
-    @validator('CapTK')
+    @validator('captk')
     def validate_captk(cls, v):
         if v < 1 or v > 5:
             raise ValueError('Cấp tài khoản phải từ 1 đến 5')
@@ -17,23 +17,23 @@ class TKKTBase(BaseModel):
 
 # Properties to receive on TKKT creation
 class TKKTCreate(TKKTBase):
-    MaTK: str = Field(..., description="Mã tài khoản kế toán", example="511")
+    matk: str = Field(..., description="Mã tài khoản kế toán", example="511")
 
 
 # Properties to receive on TKKT update
-class TKKTUpdate(TKKTBase):
-    TenTK: Optional[str] = None
-    CapTK: Optional[int] = None
+class TKKTUpdate(BaseModel):
+    tentk: Optional[str] = None
+    captk: Optional[int] = Field(None, ge=1, le=5)
 
 
 # Properties shared by models stored in DB
 class TKKTInDBBase(TKKTBase):
-    MaTK: str
+    matk: str
     created_at: datetime
     updated_at: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Properties to return to client

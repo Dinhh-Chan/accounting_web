@@ -19,7 +19,7 @@ class CRUDTKKT(CRUDBase[TKKT, TKKTCreate, TKKTUpdate]):
         Returns:
             The account if found, None otherwise
         """
-        query = select(self.model).where(self.model.MaTK == ma_tk)
+        query = select(self.model).where(self.model.matk == ma_tk)
         result = await db.execute(query)
         return result.scalars().first()
     
@@ -34,7 +34,7 @@ class CRUDTKKT(CRUDBase[TKKT, TKKTCreate, TKKTUpdate]):
         Returns:
             True if the account exists, False otherwise
         """
-        query = select(self.model).where(self.model.MaTK == ma_tk)
+        query = select(self.model).where(self.model.matk == ma_tk)
         result = await db.execute(query)
         return result.scalars().first() is not None
     
@@ -49,7 +49,7 @@ class CRUDTKKT(CRUDBase[TKKT, TKKTCreate, TKKTUpdate]):
         Returns:
             List of accounts at the specified level
         """
-        query = select(self.model).where(self.model.CapTK == cap_tk)
+        query = select(self.model).where(self.model.captk == cap_tk)
         result = await db.execute(query)
         return result.scalars().all()
     
@@ -75,8 +75,8 @@ class CRUDTKKT(CRUDBase[TKKT, TKKTCreate, TKKTUpdate]):
         """
         search_term = f"%{keyword}%"
         query = select(self.model).where(
-            (self.model.MaTK.ilike(search_term)) |
-            (self.model.TenTK.ilike(search_term))
+            (self.model.matk.ilike(search_term)) |
+            (self.model.tentk.ilike(search_term))
         ).offset(skip).limit(limit)
         
         result = await db.execute(query)

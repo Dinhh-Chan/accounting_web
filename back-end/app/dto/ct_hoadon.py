@@ -1,24 +1,24 @@
 from typing import Optional
 from datetime import datetime
 from decimal import Decimal
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, condecimal
 
 
 # Shared properties
 class CTHoaDonBase(BaseModel):
-    SoCT: str = Field(..., description="Số chứng từ", example="HD0001")
-    MaSPDV: str = Field(..., description="Mã sản phẩm dịch vụ", example="SP0001")
-    SoLuong: Decimal = Field(..., description="Số lượng", example=1.00)
-    DVT: str = Field(..., description="Đơn vị tính", example="Bản")
-    DonGia: Decimal = Field(..., description="Đơn giá", example=10000000.00)
+    soct: str = Field(..., description="Số chứng từ", example="HD0001")
+    maspdv: str = Field(..., description="Mã sản phẩm dịch vụ", example="SP0001")
+    soluong: condecimal(ge=0) = Field(..., description="Số lượng", example=2.0)
+    dvt: str = Field(..., description="Đơn vị tính", example="Cái")
+    dongia: condecimal(ge=0) = Field(..., description="Đơn giá", example=1000000.00)
     
-    @validator('SoLuong')
+    @validator('soluong')
     def validate_soluong(cls, v):
         if v <= 0:
             raise ValueError('Số lượng phải lớn hơn 0')
         return v
     
-    @validator('DonGia')
+    @validator('dongia')
     def validate_dongia(cls, v):
         if v <= 0:
             raise ValueError('Đơn giá phải lớn hơn 0')
@@ -26,18 +26,15 @@ class CTHoaDonBase(BaseModel):
 
 
 # Properties to receive on CTHoaDon creation
-class CTHoaDonCreate(BaseModel):
-    MaSPDV: str = Field(..., description="Mã sản phẩm dịch vụ", example="SP0001")
-    SoLuong: Decimal = Field(..., description="Số lượng", example=1.00)
-    DVT: str = Field(..., description="Đơn vị tính", example="Bản")
-    DonGia: Decimal = Field(..., description="Đơn giá", example=10000000.00)
+class CTHoaDonCreate(CTHoaDonBase):
+    pass
 
 
 # Properties to receive on CTHoaDon update
 class CTHoaDonUpdate(BaseModel):
-    SoLuong: Optional[Decimal] = None
-    DVT: Optional[str] = None
-    DonGia: Optional[Decimal] = None
+    soluong: Optional[condecimal(ge=0)] = None
+    dvt: Optional[str] = None
+    dongia: Optional[condecimal(ge=0)] = None
 
 
 # Properties shared by models stored in DB
@@ -46,7 +43,7 @@ class CTHoaDonInDBBase(CTHoaDonBase):
     updated_at: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Properties to return to client
