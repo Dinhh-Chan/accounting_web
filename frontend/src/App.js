@@ -1,122 +1,84 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { BrowserRouter as Router } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { viVN } from '@mui/material/locale';
 
-// Layout component
-import MainLayout from './components/layout/MainLayout';
+import AppRoutes from './Routes';
+import { AuthProvider } from './contexts/AuthContext';
 
-// Auth pages
-import LoginPage from './components/auth/LoginPage';
-import RegisterPage from './components/auth/RegisterPage';
-import ProfilePage from './components/auth/ProfilePage';
-
-// Dashboard page
-import DashboardPage from './components/dashboard/DashboardPage';
-
-// Customer pages
-import CustomerListPage from './components/customer/CustomerListPage';
-import CustomerFormPage from './components/customer/CustomerFormPage';
-
-// Product pages
-import ProductListPage from './components/product/ProductListPage';
-import ProductFormPage from './components/product/ProductFormPage';
-import PriceListPage from './components/product/PriceListPage';
-
-// Invoice pages
-import InvoiceListPage from './components/invoice/InvoiceListPage';
-import InvoiceFormPage from './components/invoice/InvoiceFormPage';
-import InvoiceDetailPage from './components/invoice/InvoiceDetailPage';
-
-// Discount pages
-import DiscountListPage from './components/discount/DiscountListPage';
-import DiscountFormPage from './components/discount/DiscountFormPage';
-import DiscountDetailPage from './components/discount/DiscountDetailPage';
-
-// Report pages
-import ReportPage from './components/report/ReportPage';
-
-// Account pages
-import AccountListPage from './components/account/AccountListPage';
-import AccountFormPage from './components/account/AccountFormPage';
-
-// Error pages
-import NotFoundPage from './components/common/NotFoundPage';
-
-// Private route component
-const PrivateRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
-  
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-  
-  return isAuthenticated ? children : <Navigate to="/login" />;
-};
-
-// Public route (accessible only when not authenticated)
-const PublicRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
-  
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-  
-  return !isAuthenticated ? children : <Navigate to="/dashboard" />;
-};
-
-// Create theme
+// Tạo theme tùy chỉnh
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#6C5CE7',
-      light: '#8F7FF7',
-      dark: '#5A4BD1',
+      main: '#1976d2',
+      light: '#42a5f5',
+      dark: '#1565c0',
       contrastText: '#fff',
     },
     secondary: {
-      main: '#FF9F43',
-      light: '#FFBE7A',
-      dark: '#FF8510',
+      main: '#9c27b0',
+      light: '#ba68c8',
+      dark: '#7b1fa2',
       contrastText: '#fff',
     },
-    error: {
-      main: '#EA5455',
-      light: '#F08182',
-      dark: '#E42728',
-    },
     success: {
-      main: '#28C76F',
-      light: '#55D98D',
-      dark: '#1F9D57',
+      main: '#2e7d32',
+      light: '#4caf50',
+      dark: '#1b5e20',
+    },
+    error: {
+      main: '#d32f2f',
+      light: '#ef5350',
+      dark: '#c62828',
+    },
+    warning: {
+      main: '#ed6c02',
+      light: '#ff9800',
+      dark: '#e65100',
+    },
+    info: {
+      main: '#0288d1',
+      light: '#03a9f4',
+      dark: '#01579b',
     },
     background: {
-      default: '#F8F8F8',
+      default: '#f5f5f5',
+      paper: '#ffffff',
     },
   },
   typography: {
     fontFamily: [
-      'Inter',
-      'Roboto',
+      '"Roboto"',
+      '-apple-system',
+      'BlinkMacSystemFont',
+      '"Segoe UI"',
+      '"Helvetica Neue"',
       'Arial',
       'sans-serif',
     ].join(','),
     h1: {
+      fontSize: '2.5rem',
       fontWeight: 600,
     },
     h2: {
+      fontSize: '2rem',
       fontWeight: 600,
     },
     h3: {
+      fontSize: '1.75rem',
       fontWeight: 600,
     },
     h4: {
+      fontSize: '1.5rem',
       fontWeight: 600,
     },
     h5: {
+      fontSize: '1.25rem',
       fontWeight: 600,
     },
     h6: {
+      fontSize: '1rem',
       fontWeight: 600,
     },
   },
@@ -132,221 +94,42 @@ const theme = createTheme({
         },
       },
     },
-    MuiCard: {
+    MuiPaper: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
-          boxShadow: '0px 2px 10px rgba(0, 0, 0, 0.05)',
+          borderRadius: 8,
         },
       },
     },
-    MuiPaper: {
+    MuiCard: {
       styleOverrides: {
-        rounded: {
-          borderRadius: 12,
+        root: {
+          borderRadius: 8,
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+        },
+      },
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        head: {
+          fontWeight: 600,
         },
       },
     },
   },
-});
+}, viVN); // Thêm ngôn ngữ Tiếng Việt
 
-const AppContent = () => {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={
-          <PublicRoute>
-            <LoginPage />
-          </PublicRoute>
-        } />
-        <Route path="/register" element={
-          <PublicRoute>
-            <RegisterPage />
-          </PublicRoute>
-        } />
-        
-        {/* Dashboard */}
-        <Route path="/dashboard" element={
-          <PrivateRoute>
-            <MainLayout>
-              <DashboardPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        
-        {/* Customer routes */}
-        <Route path="/customers" element={
-          <PrivateRoute>
-            <MainLayout>
-              <CustomerListPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/customers/add" element={
-          <PrivateRoute>
-            <MainLayout>
-              <CustomerFormPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/customers/edit/:id" element={
-          <PrivateRoute>
-            <MainLayout>
-              <CustomerFormPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        
-        {/* Product routes */}
-        <Route path="/products" element={
-          <PrivateRoute>
-            <MainLayout>
-              <ProductListPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/products/add" element={
-          <PrivateRoute>
-            <MainLayout>
-              <ProductFormPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/products/edit/:id" element={
-          <PrivateRoute>
-            <MainLayout>
-              <ProductFormPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/products/prices/:id" element={
-          <PrivateRoute>
-            <MainLayout>
-              <PriceListPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        
-        {/* Invoice routes */}
-        <Route path="/invoices" element={
-          <PrivateRoute>
-            <MainLayout>
-              <InvoiceListPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/invoices/add" element={
-          <PrivateRoute>
-            <MainLayout>
-              <InvoiceFormPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/invoices/edit/:id" element={
-          <PrivateRoute>
-            <MainLayout>
-              <InvoiceFormPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/invoices/view/:id" element={
-          <PrivateRoute>
-            <MainLayout>
-              <InvoiceDetailPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        
-        {/* Discount routes */}
-        <Route path="/discounts" element={
-          <PrivateRoute>
-            <MainLayout>
-              <DiscountListPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/discounts/add" element={
-          <PrivateRoute>
-            <MainLayout>
-              <DiscountFormPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/discounts/edit/:id" element={
-          <PrivateRoute>
-            <MainLayout>
-              <DiscountFormPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/discounts/view/:id" element={
-          <PrivateRoute>
-            <MainLayout>
-              <DiscountDetailPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        
-        {/* Report routes */}
-        <Route path="/reports" element={
-          <PrivateRoute>
-            <MainLayout>
-              <ReportPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        
-        {/* Account routes */}
-        <Route path="/accounts" element={
-          <PrivateRoute>
-            <MainLayout>
-              <AccountListPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/accounts/add" element={
-          <PrivateRoute>
-            <MainLayout>
-              <AccountFormPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/accounts/edit/:id" element={
-          <PrivateRoute>
-            <MainLayout>
-              <AccountFormPage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        
-        {/* Profile route */}
-        <Route path="/profile" element={
-          <PrivateRoute>
-            <MainLayout>
-              <ProfilePage />
-            </MainLayout>
-          </PrivateRoute>
-        } />
-        
-        {/* Default route redirects to dashboard if authenticated, login otherwise */}
-        <Route path="/" element={<Navigate to="/dashboard" />} />
-        
-        {/* 404 Not Found */}
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </Router>
-  );
-};
-
-const App = () => {
+function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <AppContent />
+        <Router>
+          <AppRoutes />
+        </Router>
       </AuthProvider>
     </ThemeProvider>
   );
-};
+}
 
 export default App;
