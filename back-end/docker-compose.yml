@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_SERVER=db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=app
+      - SQL_DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/app
+      - RESET_DB=true 
+      - AUTO_MIGRATE=true 
+    volumes:
+      - ./:/app/
+    depends_on:
+      - db
+    command: ["sh", "/app/start.sh"]
+
+  db:
+    image: postgres:14
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=app
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
