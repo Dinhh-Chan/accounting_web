@@ -37,6 +37,6 @@ export const API_ENDPOINTS = {
   // Định mức chiết khấu - Sửa lại endpoint
   DISCOUNT_RATES: `${API_URL}/api/${API_VERSION}/dinhmucck`,
   // Thêm các hàm helper cho định mức chiết khấu
-  DISCOUNT_RATE_DETAIL: (maspdv, date) => `${API_URL}/api/${API_VERSION}/dinhmucck/product/${maspdv}`,
+  DISCOUNT_RATE_DETAIL: (maspdv, date) => `${API_URL}/api/${API_VERSION}/dinhmucck/${maspdv}/${date}`,
   DISCOUNT_RATES_BY_PRODUCT: (maspdv) => `${API_URL}/api/${API_VERSION}/dinhmucck/product/${maspdv}`,
 }; 

@@ -32,7 +32,7 @@ import { vi } from 'date-fns/locale';
 import axiosInstance from '../../utils/axios';
 import { API_ENDPOINTS } from '../../config/api';
 import { format, parseISO } from 'date-fns';
-
+import * as locales from 'date-fns/locale';
 const StyledCard = styled(Card)(({ theme }) => ({
   margin: theme.spacing(2, 0),
   boxShadow: theme.shadows[2],

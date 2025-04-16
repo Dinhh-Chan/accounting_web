@@ -34,9 +34,10 @@ import {
   CalendarMonth as CalendarIcon,
   FilterAlt as FilterIcon,
   Percent as PercentIcon,
-  TrendingUp as TrendingUpIcon
+  TrendingUp as TrendingUpIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 import axiosInstance from '../../utils/axios';
 import { API_ENDPOINTS } from '../../config/api';
@@ -76,9 +77,23 @@ const formatCurrency = (amount) => {
 
 const formatDate = (dateString) => {
   try {
-    const date = new Date(dateString);
+    // Xử lý chuỗi ngày có thời gian
+    let cleanDateString = dateString;
+    
+    // Nếu là chuỗi ISO với phần thời gian, lấy chỉ phần ngày
+    if (typeof dateString === 'string' && dateString.includes('T')) {
+      cleanDateString = dateString.split('T')[0];
+    }
+    
+    const date = new Date(cleanDateString);
+    if (isNaN(date.getTime())) {
+      console.warn('Không thể chuyển đổi ngày:', dateString);
+      return dateString;
+    }
+    
     return format(date, 'dd/MM/yyyy', { locale: vi });
   } catch (error) {
+    console.error('Lỗi định dạng ngày:', error);
     return dateString;
   }
 };
@@ -89,6 +104,7 @@ const formatPercent = (value) => {
 
 const DinhmucckListPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [dinhmucck, setDinhmucck] = useState([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
@@ -143,13 +159,16 @@ const DinhmucckListPage = () => {
       if (Array.isArray(response.data)) {
         setDinhmucck(response.data);
         setTotalCount(response.data.length);
+        return response.data;
       } else if (response.data && Array.isArray(response.data.items)) {
         setDinhmucck(response.data.items);
         setTotalCount(response.data.total || response.data.items.length);
+        return response.data.items;
       } else {
         console.warn('Dữ liệu không phải là mảng:', response.data);
         setDinhmucck([]);
         setTotalCount(0);
+        return [];
       }
     } catch (error) {
       console.error('Lỗi khi tải danh sách định mức chiết khấu:', error);
@@ -174,15 +193,37 @@ const DinhmucckListPage = () => {
       });
       setDinhmucck([]);
       setTotalCount(0);
+      return []; // Trả về mảng rỗng trong trường hợp lỗi
     } finally {
       setLoading(false);
     }
   }, [page, rowsPerPage, productFilter, setSnackbar]);
 
+  // Thêm hàm refresh dữ liệu có thể gọi bất cứ khi nào
+  const refreshData = useCallback(() => {
+    console.log('Làm mới dữ liệu định mức chiết khấu...');
+    setLoading(true);
+    fetchDinhmucck()
+      .finally(() => {
+        console.log('Đã làm mới xong dữ liệu.');
+        setLoading(false);
+      });
+  }, [fetchDinhmucck]);
+
   useEffect(() => {
     fetchDinhmucck();
     fetchProducts();
   }, [fetchDinhmucck, fetchProducts]);
+
+  // Kiểm tra location.state để xem có cần refresh data không
+  useEffect(() => {
+    if (location.state?.refreshData) {
+      console.log('Phát hiện yêu cầu làm mới dữ liệu từ trang chỉnh sửa');
+      refreshData();
+      // Xóa state để tránh refresh liên tục
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, refreshData, navigate, location.pathname]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -459,6 +500,15 @@ const DinhmucckListPage = () => {
             onClick={handleFilterClick}
           >
             Lọc
+          </Button>
+
+          <Button
+            variant="outlined"
+            color="secondary"
+            startIcon={<RefreshIcon />}
+            onClick={refreshData}
+          >
+            Làm mới
           </Button>
 
           <Button

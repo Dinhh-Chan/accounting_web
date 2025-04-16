@@ -160,26 +160,40 @@ const DinhmucckEditPage = () => {
       
       // Sử dụng helper function để tạo URL API
       const apiUrl = API_ENDPOINTS.DISCOUNT_RATE_DETAIL(maspdv, formattedDate);
-      console.log("API URL:", apiUrl);
+      console.log("API URL để lấy thông tin định mức chiết khấu:", apiUrl);
       
       // Gọi API endpoint trực tiếp
       const response = await axiosInstance.get(apiUrl);
-      const discountData = response.data;
+      console.log("Dữ liệu nhận được từ API:", response.data);
       
-      console.log("Dữ liệu nhận được từ API:", discountData);
+      // Xử lý ngày từ API có thể chứa phần thời gian
+      let effectiveDate;
+      if (response.data.ngayhl) {
+        if (typeof response.data.ngayhl === 'string' && response.data.ngayhl.includes('T')) {
+          // Nếu ngày có phần thời gian, chỉ lấy phần ngày
+          const datePart = response.data.ngayhl.split('T')[0];
+          effectiveDate = new Date(datePart + 'T00:00:00'); // Thêm thời gian 00:00:00 để đảm bảo đúng múi giờ
+        } else {
+          // Trường hợp ngày không có phần thời gian hoặc đã là đối tượng Date
+          effectiveDate = new Date(response.data.ngayhl);
+        }
+      } else {
+        // Sử dụng ngày từ tham số URL nếu API không trả về ngày
+        effectiveDate = new Date(year, month, day);
+      }
       
       // Cập nhật state với dữ liệu từ API
       setFormState({
-        maspdv: discountData.maspdv,
-        ngayhl: discountData.ngayhl ? parseISO(discountData.ngayhl) : new Date(year, month, day),
-        muctien: discountData.muctien?.toString() || '0',
-        tyleck: parseFloat(discountData.tyleck || discountData.tiledk) || 0
+        maspdv: response.data.maspdv || maspdv,
+        ngayhl: effectiveDate,
+        muctien: response.data.muctien?.toString() || '0',
+        tyleck: parseFloat(response.data.tyleck || response.data.tiledk) || 0
       });
       
-      setOriginalData(discountData);
+      setOriginalData(response.data);
       
       // Tải thông tin sản phẩm
-      await fetchProductData(discountData.maspdv);
+      await fetchProductData(response.data.maspdv || maspdv);
     } catch (error) {
       console.error('Lỗi khi tải thông tin định mức chiết khấu:', error);
       console.error('Chi tiết lỗi:', error.message || 'Không có thông tin chi tiết');
@@ -187,13 +201,26 @@ const DinhmucckEditPage = () => {
       if (error.response) {
         console.error('Mã lỗi:', error.response.status);
         console.error('Dữ liệu phản hồi:', error.response.data);
+        
+        let errorDetail = '';
+        if (error.response.data && error.response.data.detail) {
+          errorDetail = typeof error.response.data.detail === 'string' 
+            ? error.response.data.detail 
+            : JSON.stringify(error.response.data.detail);
+        }
+        
+        setAlert({
+          show: true,
+          message: `Không thể tải thông tin định mức chiết khấu (${error.response.status}): ${errorDetail || error.message}`,
+          severity: 'error'
+        });
+      } else {
+        setAlert({
+          show: true,
+          message: `Không thể tải thông tin định mức chiết khấu: ${error.message}`,
+          severity: 'error'
+        });
       }
-      
-      setAlert({
-        show: true,
-        message: `Không thể tải thông tin định mức chiết khấu: ${error.response?.data?.detail || error.message || 'Vui lòng thử lại sau hoặc quay lại danh sách.'}`,
-        severity: 'error'
-      });
     } finally {
       setInitialLoading(false);
     }
@@ -278,10 +305,10 @@ const DinhmucckEditPage = () => {
       const month = String(formState.ngayhl.getMonth() + 1).padStart(2, '0');
       const day = String(formState.ngayhl.getDate()).padStart(2, '0');
       
-      // Định dạng dữ liệu để gửi
+      // Định dạng dữ liệu để gửi - sử dụng chuẩn ISO nhưng chỉ lấy phần ngày
       const formData = {
         maspdv: originalData.maspdv,
-        ngayhl: `${year}-${month}-${day}`, // Format: YYYY-MM-DD
+        ngayhl: `${year}-${month}-${day}T00:00:00`, // Format: YYYY-MM-DDT00:00:00 theo chuẩn ISO
         muctien: parseFloat(formState.muctien),
         tyleck: parseFloat(formState.tyleck)
       };
@@ -318,7 +345,7 @@ const DinhmucckEditPage = () => {
       
       // Gửi request cập nhật
       const response = await axiosInstance.put(updateUrl, formData);
-      console.log("Phản hồi API:", response.data);
+      console.log("Phản hồi API cập nhật thành công:", response.data);
       
       // Hiển thị thông báo thành công
       setAlert({
@@ -329,7 +356,8 @@ const DinhmucckEditPage = () => {
       
       // Quay lại trang danh sách sau 1 giây
       setTimeout(() => {
-        navigate('/dinhmucck');
+        console.log("Đang chuyển hướng về trang danh sách...");
+        navigate('/dinhmucck', { state: { refreshData: true } });
       }, 1000);
     } catch (error) {
       console.error('Lỗi khi cập nhật định mức chiết khấu:', error);
@@ -339,39 +367,40 @@ const DinhmucckEditPage = () => {
       
       if (error.response) {
         // Lỗi có phản hồi từ server
-        console.error('Lỗi từ server:', error.response.data);
+        console.error('Lỗi từ server:', error.response.status, error.response.data);
         
-        // Kiểm tra nếu error.response.data chứa đối tượng lỗi
-        if (typeof error.response.data === 'object' && error.response.data !== null) {
-          // Nếu có trường detail, sử dụng nó
-          if (error.response.data.detail) {
-            if (typeof error.response.data.detail === 'string') {
-              errorMsg = error.response.data.detail;
-            } else if (Array.isArray(error.response.data.detail)) {
-              // Nếu detail là một mảng, lấy thông báo từ phần tử đầu tiên
-              const firstError = error.response.data.detail[0];
-              if (typeof firstError === 'string') {
-                errorMsg = firstError;
-              } else if (typeof firstError === 'object' && firstError !== null) {
-                errorMsg = firstError.msg || 'Lỗi dữ liệu không hợp lệ';
-              }
-            } else if (typeof error.response.data.detail === 'object') {
-              // Nếu detail là một đối tượng, chuyển đổi nó thành chuỗi
-              errorMsg = JSON.stringify(error.response.data.detail);
+        if (error.response.status === 404) {
+          errorMsg = 'Không tìm thấy định mức chiết khấu để cập nhật. Có thể định mức đã bị xóa hoặc thay đổi.';
+        } else if (error.response.status === 400) {
+          if (error.response.data && error.response.data.detail) {
+            errorMsg = typeof error.response.data.detail === 'string'
+              ? error.response.data.detail
+              : JSON.stringify(error.response.data.detail);
+          } else {
+            errorMsg = 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.';
+          }
+        } else if (error.response.status === 401) {
+          errorMsg = 'Phiên làm việc hết hạn. Vui lòng đăng nhập lại.';
+        } else {
+          // Trường hợp khác
+          if (typeof error.response.data === 'object' && error.response.data !== null) {
+            if (error.response.data.detail) {
+              errorMsg = typeof error.response.data.detail === 'string'
+                ? error.response.data.detail
+                : JSON.stringify(error.response.data.detail);
+            } else {
+              errorMsg = Object.entries(error.response.data)
+                .map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
+                .join(', ');
             }
           } else {
-            // Nếu không có detail, chuyển đổi toàn bộ đối tượng lỗi thành chuỗi
-            errorMsg = Object.entries(error.response.data)
-              .map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
-              .join(', ');
+            errorMsg = `Lỗi từ server: ${error.response.status}`;
           }
-        } else {
-          errorMsg = 'Lỗi từ server: ' + error.response.status;
         }
       } else if (error.request) {
         // Lỗi không nhận được phản hồi từ server
         console.error('Không nhận được phản hồi từ server');
-        errorMsg = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và đảm bảo máy chủ đang hoạt động.';
+        errorMsg = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.';
       } else {
         // Lỗi khi thiết lập request
         console.error('Lỗi khi thiết lập request:', error.message);

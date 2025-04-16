@@ -26,6 +26,7 @@ import {
   Snackbar,
   MenuItem
 } from '@mui/material';
+import * as locales from 'date-fns/locale';
 import {
   Add as AddIcon,
   Search as SearchIcon,

@@ -211,13 +211,15 @@ const DinhmucckCreatePage = () => {
     
     setLoading(true);
     try {
-      // Định dạng dữ liệu để gửi
+      // Lấy các thành phần ngày để định dạng chuẩn
+      const year = formState.ngayhl.getFullYear();
+      const month = String(formState.ngayhl.getMonth() + 1).padStart(2, '0');
+      const day = String(formState.ngayhl.getDate()).padStart(2, '0');
+      
+      // Định dạng dữ liệu để gửi - chỉ gửi phần ngày, không có phần thời gian
       const formData = {
         maspdv: formState.maspdv,
-        ngayhl: new Date(formState.ngayhl.getFullYear(), 
-                        formState.ngayhl.getMonth(), 
-                        formState.ngayhl.getDate(),
-                        0, 0, 0).toISOString().replace('Z', ''),
+        ngayhl: `${year}-${month}-${day}T00:00:00`, // Format: YYYY-MM-DDT00:00:00 theo chuẩn ISO
         muctien: parseFloat(formState.muctien),
         tyleck: parseFloat(formState.tyleck)
       };
