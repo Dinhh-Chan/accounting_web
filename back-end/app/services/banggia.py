@@ -26,10 +26,13 @@ class CRUDBangGia(CRUDBase[BangGia, BangGiaCreate, BangGiaUpdate]):
         Returns:
             The price entry if found, None otherwise
         """
+        # Loại bỏ thông tin múi giờ từ datetime trước khi truy vấn
+        naive_ngay_hl = ngay_hl.replace(tzinfo=None)
+        
         query = select(self.model).where(
             and_(
                 self.model.maspdv == ma_spdv,
-                self.model.ngayhl == ngay_hl
+                self.model.ngayhl == naive_ngay_hl
             )
         )
         result = await db.execute(query)
@@ -73,6 +76,9 @@ class CRUDBangGia(CRUDBase[BangGia, BangGiaCreate, BangGiaUpdate]):
         """
         if date is None:
             date = datetime.utcnow()
+        else:
+            # Loại bỏ thông tin múi giờ
+            date = date.replace(tzinfo=None)
             
         query = select(self.model).where(
             and_(

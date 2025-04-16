@@ -1,7 +1,8 @@
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from dateutil import parser
 
 from app.db.session import get_db
 from app.dependencies.user import get_current_active_user
@@ -63,7 +64,7 @@ async def read_banggia_by_product(
 @router.get("/latest/{ma_spdv}", response_model=BangGia)
 async def read_latest_price(
     ma_spdv: str = Path(..., description="Mã sản phẩm dịch vụ"),
-    date: Optional[datetime] = Query(None, description="Ngày tham chiếu (mặc định: ngày hiện tại)"),
+    date: Optional[Union[datetime, str]] = Query(None, description="Ngày tham chiếu (mặc định: ngày hiện tại)"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
@@ -82,13 +83,23 @@ async def read_latest_price(
 @router.get("/{ma_spdv}/{ngay_hl}", response_model=BangGia)
 async def read_banggia_by_product_and_date(
     ma_spdv: str = Path(..., description="Mã sản phẩm dịch vụ"),
-    ngay_hl: datetime = Path(..., description="Ngày hiệu lực"),
+    ngay_hl: Union[datetime, str] = Path(..., description="Ngày hiệu lực"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     Lấy giá của sản phẩm theo ngày hiệu lực cụ thể.
     """
+    # Chuyển đổi ngày nếu cần
+    if isinstance(ngay_hl, str):
+        try:
+            ngay_hl = parser.parse(ngay_hl)
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Định dạng ngày không hợp lệ"
+            )
+            
     price = await banggia.get_by_ma_spdv_and_date(db, ma_spdv=ma_spdv, ngay_hl=ngay_hl)
     if not price:
         raise HTTPException(
@@ -102,7 +113,7 @@ async def read_banggia_by_product_and_date(
 async def update_banggia(
     *,
     ma_spdv: str = Path(..., description="Mã sản phẩm dịch vụ"),
-    ngay_hl: datetime = Path(..., description="Ngày hiệu lực"),
+    ngay_hl: Union[datetime, str] = Path(..., description="Ngày hiệu lực"),
     banggia_in: BangGiaUpdate = Body(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -110,6 +121,16 @@ async def update_banggia(
     """
     Cập nhật thông tin giá.
     """
+    # Chuyển đổi ngày nếu cần
+    if isinstance(ngay_hl, str):
+        try:
+            ngay_hl = parser.parse(ngay_hl)
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Định dạng ngày không hợp lệ"
+            )
+            
     price = await banggia.get_by_ma_spdv_and_date(db, ma_spdv=ma_spdv, ngay_hl=ngay_hl)
     if not price:
         raise HTTPException(
@@ -138,13 +159,23 @@ async def update_banggia(
 async def delete_banggia(
     *,
     ma_spdv: str = Path(..., description="Mã sản phẩm dịch vụ"),
-    ngay_hl: datetime = Path(..., description="Ngày hiệu lực"),
+    ngay_hl: Union[datetime, str] = Path(..., description="Ngày hiệu lực"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     Xóa thông tin giá.
     """
+    # Chuyển đổi ngày nếu cần
+    if isinstance(ngay_hl, str):
+        try:
+            ngay_hl = parser.parse(ngay_hl)
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Định dạng ngày không hợp lệ"
+            )
+            
     price = await banggia.get_by_ma_spdv_and_date(db, ma_spdv=ma_spdv, ngay_hl=ngay_hl)
     if not price:
         raise HTTPException(

@@ -11,6 +11,28 @@ from app.dto.dinhmucck import DinhMucCK, DinhMucCKCreate, DinhMucCKUpdate
 
 router = APIRouter()
 
+def parse_date(date_string: str) -> datetime:
+    """Parse date string to datetime object without timezone."""
+    try:
+        # Nếu date_string có định dạng ISO, chỉ lấy phần date và time
+        # và loại bỏ timezone
+        if 'T' in date_string:
+            # Loại bỏ phần timezone nếu có
+            if '+' in date_string:
+                date_string = date_string.split('+')[0]
+            elif 'Z' in date_string:
+                date_string = date_string.replace('Z', '')
+            
+            # Parse datetime không có timezone
+            return datetime.fromisoformat(date_string)
+        
+        # Chuyển đổi string thành datetime không có timezone
+        return datetime.strptime(date_string, "%Y-%m-%d")
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid date format: {e}. Expected format: YYYY-MM-DD or ISO format"
+        )
 
 @router.post("", response_model=DinhMucCK, status_code=status.HTTP_201_CREATED)
 async def create_dinhmucck(
@@ -22,6 +44,10 @@ async def create_dinhmucck(
     """
     Tạo định mức chiết khấu mới cho sản phẩm.
     """
+    # Ensure ngayhl has no timezone
+    if isinstance(dinhmucck_in.ngayhl, str):
+        dinhmucck_in.ngayhl = parse_date(dinhmucck_in.ngayhl)
+
     # Kiểm tra xem đã tồn tại định mức cho sản phẩm và ngày hiệu lực chưa
     existing = await dinhmucck.get_by_ma_spdv_and_date(
         db, ma_spdv=dinhmucck_in.maspdv, ngay_hl=dinhmucck_in.ngayhl
@@ -83,14 +109,15 @@ async def read_latest_discount(
 @router.get("/{ma_spdv}/{ngay_hl}", response_model=DinhMucCK)
 async def read_dinhmucck_by_product_and_date(
     ma_spdv: str = Path(..., description="Mã sản phẩm dịch vụ"),
-    ngay_hl: datetime = Path(..., description="Ngày hiệu lực"),
+    ngay_hl: str = Path(..., description="Ngày hiệu lực"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     Lấy định mức chiết khấu của sản phẩm theo ngày hiệu lực cụ thể.
     """
-    discount = await dinhmucck.get_by_ma_spdv_and_date(db, ma_spdv=ma_spdv, ngay_hl=ngay_hl)
+    date_obj = parse_date(ngay_hl)
+    discount = await dinhmucck.get_by_ma_spdv_and_date(db, ma_spdv=ma_spdv, ngay_hl=date_obj)
     if not discount:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -103,7 +130,7 @@ async def read_dinhmucck_by_product_and_date(
 async def update_dinhmucck(
     *,
     ma_spdv: str = Path(..., description="Mã sản phẩm dịch vụ"),
-    ngay_hl: datetime = Path(..., description="Ngày hiệu lực"),
+    ngay_hl: str = Path(..., description="Ngày hiệu lực"),
     dinhmucck_in: DinhMucCKUpdate = Body(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -111,7 +138,8 @@ async def update_dinhmucck(
     """
     Cập nhật thông tin định mức chiết khấu.
     """
-    discount = await dinhmucck.get_by_ma_spdv_and_date(db, ma_spdv=ma_spdv, ngay_hl=ngay_hl)
+    date_obj = parse_date(ngay_hl)
+    discount = await dinhmucck.get_by_ma_spdv_and_date(db, ma_spdv=ma_spdv, ngay_hl=date_obj)
     if not discount:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -121,6 +149,11 @@ async def update_dinhmucck(
     # Nếu thay đổi maspdv hoặc ngayhl, kiểm tra xem đã tồn tại chưa
     if (dinhmucck_in.maspdv and dinhmucck_in.maspdv != discount.maspdv) or \
        (dinhmucck_in.ngayhl and dinhmucck_in.ngayhl != discount.ngayhl):
+        
+        # Chuyển đổi ngayhl nếu là chuỗi
+        if isinstance(dinhmucck_in.ngayhl, str):
+            dinhmucck_in.ngayhl = parse_date(dinhmucck_in.ngayhl)
+        
         existing = await dinhmucck.get_by_ma_spdv_and_date(
             db, 
             ma_spdv=dinhmucck_in.maspdv if dinhmucck_in.maspdv else discount.maspdv,
@@ -139,14 +172,15 @@ async def update_dinhmucck(
 async def delete_dinhmucck(
     *,
     ma_spdv: str = Path(..., description="Mã sản phẩm dịch vụ"),
-    ngay_hl: datetime = Path(..., description="Ngày hiệu lực"),
+    ngay_hl: str = Path(..., description="Ngày hiệu lực"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     Xóa thông tin định mức chiết khấu.
     """
-    discount = await dinhmucck.get_by_ma_spdv_and_date(db, ma_spdv=ma_spdv, ngay_hl=ngay_hl)
+    date_obj = parse_date(ngay_hl)
+    discount = await dinhmucck.get_by_ma_spdv_and_date(db, ma_spdv=ma_spdv, ngay_hl=date_obj)
     if not discount:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -154,7 +188,7 @@ async def delete_dinhmucck(
         )
     
     # Composite primary key - cần xử lý đặc biệt
-    db_obj = await db.get(DinhMucCK, {"maspdv": ma_spdv, "ngayhl": ngay_hl})
+    db_obj = await db.get(DinhMucCK, {"maspdv": ma_spdv, "ngayhl": date_obj})
     if db_obj:
         await db.delete(db_obj)
         await db.commit()

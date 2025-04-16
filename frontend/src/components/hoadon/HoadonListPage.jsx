@@ -1,327 +1,277 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
-  IconButton,
-  Tooltip,
-  Typography,
-  Button,
-  TextField,
-  InputAdornment,
-  CircularProgress,
-  Alert,
-  Snackbar,
-  Chip
-} from '@mui/material';
-import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Search as SearchIcon,
-  Visibility as VisibilityIcon,
-  CalendarMonth as CalendarIcon
-} from '@mui/icons-material';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
-import { vi } from 'date-fns/locale';
-import { format } from 'date-fns';
-import axiosInstance from '../../utils/axios';
-import { API_ENDPOINTS } from '../../config/api';
 import { useNavigate } from 'react-router-dom';
+import { Table, Card, Button, Space, DatePicker, Input, Typography, message, Popconfirm, Tag } from 'antd';
+import { PlusOutlined, SearchOutlined, EditOutlined, EyeOutlined, DeleteOutlined, FilePdfOutlined } from '@ant-design/icons';
+import axios from 'axios';
+import moment from 'moment';
+import locale from 'antd/es/date-picker/locale/vi_VN';
+import { formatCurrency, formatDateTime } from '../../utils/format';
 
-const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-};
+const { Title } = Typography;
+const { RangePicker } = DatePicker;
 
 const HoadonListPage = () => {
   const navigate = useNavigate();
-  const [invoices, setInvoices] = useState([]);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
-  const [totalCount, setTotalCount] = useState(0);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [showError, setShowError] = useState(false);
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
-
-  useEffect(() => {
-    fetchInvoices();
-  }, [page, rowsPerPage, searchTerm, startDate, endDate]);
-
-  const fetchInvoices = async () => {
+  const [hoadonList, setHoadonList] = useState([]);
+  const [dateRange, setDateRange] = useState([moment().startOf('month'), moment()]);
+  const [searchText, setSearchText] = useState('');
+  const [filteredData, setFilteredData] = useState([]);
+  
+  // Tải danh sách hóa đơn
+  const fetchData = async () => {
+    if (!dateRange || !dateRange[0] || !dateRange[1]) {
+      return;
+    }
+    
+    setLoading(true);
     try {
-      setLoading(true);
-      // Xây dựng query params
-      const params = new URLSearchParams();
-      params.append('skip', page * rowsPerPage);
-      params.append('limit', rowsPerPage);
+      const startDate = dateRange[0].format('YYYY-MM-DD');
+      const endDate = dateRange[1].format('YYYY-MM-DD');
       
-      if (searchTerm) {
-        params.append('search', searchTerm);
-      }
+      const response = await axios.get(`/api/v1/hoadon/by-date-range?start_date=${startDate}&end_date=${endDate}`);
       
-      if (startDate && endDate) {
-        params.append('start_date', format(startDate, 'yyyy-MM-dd'));
-        params.append('end_date', format(endDate, 'yyyy-MM-dd'));
-      }
+      setHoadonList(response.data.map(item => ({
+        ...item,
+        key: item.soct
+      })));
       
-      // Gọi API với params đúng cách
-      let endpoint = API_ENDPOINTS.INVOICES;
-      if (startDate && endDate) {
-        endpoint = API_ENDPOINTS.INVOICES + '/by-date-range';
-      }
-      
-      const response = await axiosInstance.get(`${endpoint}?${params.toString()}`);
-      
-      // Kiểm tra dữ liệu response
-      console.log('Invoice API response:', response.data);
-      
-      // Xử lý dữ liệu từ response
-      if (response.data && Array.isArray(response.data)) {
-        setInvoices(response.data);
-        setTotalCount(response.data.length);
-      } else if (response.data && response.data.items && Array.isArray(response.data.items)) {
-        setInvoices(response.data.items);
-        setTotalCount(response.data.total || response.data.items.length);
-      } else {
-        setInvoices([]);
-        setTotalCount(0);
-        console.warn('Invalid data format from API:', response.data);
-      }
+      setFilteredData(response.data.map(item => ({
+        ...item,
+        key: item.soct
+      })));
     } catch (error) {
-      console.error('Error fetching invoices:', error);
-      setErrorMessage('Không thể tải danh sách hóa đơn. Vui lòng thử lại sau.');
-      setShowError(true);
-      setInvoices([]);
-      setTotalCount(0);
+      message.error('Không thể tải danh sách hóa đơn: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
-
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
-    setPage(0);
-  };
-
-  const handleDeleteClick = async (soct) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa hóa đơn này không?')) {
-      try {
-        await axiosInstance.delete(API_ENDPOINTS.INVOICE_DETAIL(soct));
-        fetchInvoices(); // Gọi lại API để cập nhật danh sách
-      } catch (error) {
-        console.error('Error deleting invoice:', error);
-        setErrorMessage('Không thể xóa hóa đơn. Vui lòng thử lại sau.');
-        setShowError(true);
-      }
+  
+  useEffect(() => {
+    fetchData();
+  }, [dateRange]);
+  
+  // Lọc dữ liệu theo ô tìm kiếm
+  useEffect(() => {
+    if (!searchText) {
+      setFilteredData(hoadonList);
+      return;
     }
+    
+    const searchLower = searchText.toLowerCase();
+    const filtered = hoadonList.filter(item => 
+      item.soct.toLowerCase().includes(searchLower) ||
+      item.tenkh.toLowerCase().includes(searchLower) ||
+      (item.diengiai && item.diengiai.toLowerCase().includes(searchLower))
+    );
+    
+    setFilteredData(filtered);
+  }, [searchText, hoadonList]);
+  
+  // Xử lý thay đổi khoảng ngày
+  const handleDateRangeChange = (dates) => {
+    setDateRange(dates);
   };
-
-  const handleAddClick = () => {
-    navigate('/hoadon/create');
+  
+  // Xử lý tìm kiếm
+  const handleSearch = (e) => {
+    setSearchText(e.target.value);
   };
-
-  const handleViewClick = (soct) => {
+  
+  // Xem chi tiết hóa đơn
+  const handleViewDetail = (soct) => {
     navigate(`/hoadon/${soct}`);
   };
-
-  const handleEditClick = (soct) => {
+  
+  // Chỉnh sửa hóa đơn
+  const handleEdit = (soct) => {
     navigate(`/hoadon/edit/${soct}`);
   };
-
-  const handleCloseError = () => {
-    setShowError(false);
+  
+  // Tạo hóa đơn mới
+  const handleCreate = () => {
+    navigate('/hoadon/create');
   };
-
-  const handleDateFilterClear = () => {
-    setStartDate(null);
-    setEndDate(null);
+  
+  // Xóa hóa đơn
+  const handleDelete = async (soct) => {
+    try {
+      await axios.delete(`/api/v1/hoadon/${soct}`);
+      message.success('Xóa hóa đơn thành công');
+      fetchData();
+    } catch (error) {
+      message.error('Không thể xóa hóa đơn: ' + error.message);
+    }
   };
+  
+  // Xuất hóa đơn PDF
+  const handleExportPDF = async (soct) => {
+    try {
+      const response = await axios.get(`/api/v1/hoadon/${soct}/pdf`, {
+        responseType: 'blob'
+      });
+      
+      // Tạo URL cho blob
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      
+      // Tạo link tải xuống
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `HoaDon_${soct}.pdf`);
+      
+      // Thêm link vào document
+      document.body.appendChild(link);
+      
+      // Click link để tải
+      link.click();
+      
+      // Xóa link
+      link.parentNode.removeChild(link);
+    } catch (error) {
+      message.error('Không thể xuất hóa đơn: ' + error.message);
+    }
+  };
+  
+  // Cấu hình bảng
+  const columns = [
+    {
+      title: 'Số CT',
+      dataIndex: 'soct',
+      key: 'soct',
+      width: '10%',
+    },
+    {
+      title: 'Ngày lập',
+      dataIndex: 'ngaylap',
+      key: 'ngaylap',
+      width: '15%',
+      render: (text) => formatDateTime(text),
+      sorter: (a, b) => new Date(a.ngaylap) - new Date(b.ngaylap),
+    },
+    {
+      title: 'Khách hàng',
+      dataIndex: 'tenkh',
+      key: 'tenkh',
+      width: '25%',
+    },
+    {
+      title: 'Hình thức TT',
+      dataIndex: 'hinhthuctt',
+      key: 'hinhthuctt',
+      width: '15%',
+      render: (text) => {
+        let color = 'blue';
+        if (text === 'Tiền mặt') color = 'green';
+        if (text === 'Thẻ tín dụng') color = 'orange';
+        return <Tag color={color}>{text}</Tag>;
+      },
+    },
+    {
+      title: 'Doanh thu',
+      dataIndex: 'tiendt',
+      key: 'tiendt',
+      width: '15%',
+      render: (text) => formatCurrency(text),
+      sorter: (a, b) => a.tiendt - b.tiendt,
+    },
+    {
+      title: 'Tổng tiền',
+      dataIndex: 'tientt',
+      key: 'tientt',
+      width: '15%',
+      render: (text) => formatCurrency(text),
+      sorter: (a, b) => a.tientt - b.tientt,
+    },
+    {
+      title: '',
+      key: 'action',
+      width: '15%',
+      render: (_, record) => (
+        <Space size="small">
+          <Button 
+            type="text" 
+            icon={<EyeOutlined />} 
+            onClick={() => handleViewDetail(record.soct)}
+            title="Xem chi tiết"
+          />
+          <Button 
+            type="text" 
+            icon={<EditOutlined />} 
+            onClick={() => handleEdit(record.soct)}
+            title="Chỉnh sửa"
+          />
+          <Button 
+            type="text" 
+            icon={<FilePdfOutlined />} 
+            onClick={() => handleExportPDF(record.soct)}
+            title="Xuất PDF"
+          />
+          <Popconfirm
+            title="Xóa hóa đơn?"
+            description="Bạn có chắc chắn muốn xóa hóa đơn này không?"
+            onConfirm={() => handleDelete(record.soct)}
+            okText="Có"
+            cancelText="Không"
+          >
+            <Button 
+              type="text" 
+              danger 
+              icon={<DeleteOutlined />}
+              title="Xóa"
+            />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
 
   return (
-    <Box sx={{ width: '100%', p: 2 }}>
-      <Snackbar 
-        open={showError} 
-        autoHideDuration={6000} 
-        onClose={handleCloseError}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert onClose={handleCloseError} severity="error" sx={{ width: '100%' }}>
-          {errorMessage}
-        </Alert>
-      </Snackbar>
-
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h5" component="h1" fontWeight="bold">
-          Danh sách hóa đơn
-        </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={handleAddClick}
-        >
-          Tạo hóa đơn
-        </Button>
-      </Box>
-
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-        <TextField
-          label="Tìm kiếm"
-          variant="outlined"
-          value={searchTerm}
-          onChange={handleSearchChange}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-          size="small"
-          sx={{ width: { xs: '100%', sm: 250 } }}
-        />
+    <Card>
+      <Space direction="vertical" style={{ width: '100%' }} size="large">
+        <Space style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <Title level={2}>Danh sách hóa đơn</Title>
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />}
+            onClick={handleCreate}
+          >
+            Tạo hóa đơn mới
+          </Button>
+        </Space>
         
-        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={vi}>
-          <DatePicker
-            label="Từ ngày"
-            value={startDate}
-            onChange={(newValue) => setStartDate(newValue)}
-            renderInput={(params) => <TextField {...params} size="small" />}
-            slotProps={{ textField: { size: 'small' } }}
+        <Space style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+          <RangePicker 
+            value={dateRange}
+            onChange={handleDateRangeChange}
+            format="DD/MM/YYYY"
+            locale={locale}
+            style={{ marginRight: 8 }}
           />
           
-          <DatePicker
-            label="Đến ngày"
-            value={endDate}
-            onChange={(newValue) => setEndDate(newValue)}
-            renderInput={(params) => <TextField {...params} size="small" />}
-            slotProps={{ textField: { size: 'small' } }}
+          <Input
+            placeholder="Tìm kiếm theo số CT, tên khách hàng..."
+            prefix={<SearchOutlined />}
+            value={searchText}
+            onChange={handleSearch}
+            style={{ width: 300 }}
+            allowClear
           />
-        </LocalizationProvider>
+        </Space>
         
-        {(startDate || endDate) && (
-          <Button 
-            variant="outlined" 
-            onClick={handleDateFilterClear}
-            size="small"
-          >
-            Xóa bộ lọc
-          </Button>
-        )}
-      </Box>
-
-      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-        <TableContainer sx={{ maxHeight: 'calc(100vh - 300px)' }}>
-          <Table stickyHeader aria-label="sticky table" size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Số HĐ</TableCell>
-                <TableCell>Ngày lập</TableCell>
-                <TableCell>Khách hàng</TableCell>
-                <TableCell>Hình thức TT</TableCell>
-                <TableCell align="right">Tiền hàng</TableCell>
-                <TableCell align="right">Thuế</TableCell>
-                <TableCell align="right">Tổng tiền</TableCell>
-                <TableCell width={120}>Thao tác</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
-                    <CircularProgress />
-                  </TableCell>
-                </TableRow>
-              ) : invoices.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
-                    Không có dữ liệu
-                  </TableCell>
-                </TableRow>
-              ) : (
-                invoices.map((invoice) => (
-                  <TableRow hover key={invoice.soct}>
-                    <TableCell>{invoice.soct}</TableCell>
-                    <TableCell>
-                      {new Date(invoice.ngaylap).toLocaleDateString('vi-VN')}
-                    </TableCell>
-                    <TableCell>
-                      <Tooltip title={invoice.makh}>
-                        <span>{invoice.tenkh}</span>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>{invoice.hinhthuctt}</TableCell>
-                    <TableCell align="right">{formatCurrency(invoice.tiendt)}</TableCell>
-                    <TableCell align="right">{formatCurrency(invoice.tienthue)}</TableCell>
-                    <TableCell align="right">{formatCurrency(invoice.tientt)}</TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex' }}>
-                        <Tooltip title="Xem chi tiết">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleViewClick(invoice.soct)}
-                          >
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Sửa">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleEditClick(invoice.soct)}
-                            color="primary"
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Xóa">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDeleteClick(invoice.soct)}
-                            color="error"
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25, 50]}
-          component="div"
-          count={totalCount}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="Dòng mỗi trang:"
-          labelDisplayedRows={({ from, to, count }) => `${from}-${to} của ${count !== -1 ? count : 'nhiều hơn ' + to}`}
+        <Table
+          columns={columns}
+          dataSource={filteredData}
+          rowKey="soct"
+          loading={loading}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showTotal: (total) => `Tổng số ${total} hóa đơn`,
+          }}
+          scroll={{ x: 1200 }}
         />
-      </Paper>
-    </Box>
+      </Space>
+    </Card>
   );
 };
 

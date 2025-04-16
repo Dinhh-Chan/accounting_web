@@ -26,7 +26,6 @@ import {
   Snackbar,
   MenuItem
 } from '@mui/material';
-import * as locales from 'date-fns/locale';
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -39,8 +38,7 @@ import { useNavigate } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 import axiosInstance from '../../utils/axios';
 import { API_ENDPOINTS } from '../../config/api';
-import { format } from 'date-fns';
-import { vi } from 'date-fns/locale';
+import { format as formatDate } from 'date-fns';
 
 const HeaderBox = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -73,14 +71,6 @@ const formatCurrency = (amount) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 };
 
-const formatDate = (dateString) => {
-  try {
-    const date = new Date(dateString);
-    return format(date, 'dd/MM/yyyy', { locale: vi });
-  } catch (error) {
-    return dateString;
-  }
-};
 
 const BanggiaListPage = () => {
   const navigate = useNavigate();
@@ -313,7 +303,7 @@ const BanggiaListPage = () => {
       navigate(`/banggia/edit/${id}`);
     } else {
       // Dùng cách khác nếu không có id - sử dụng format để hiển thị trong URL
-      const dateStr = format(new Date(item.ngayhl), "yyyy-MM-dd");
+      const dateStr = formatDate(new Date(item.ngayhl), "yyyy-MM-dd");
       navigate(`/banggia/edit/${item.maspdv}/${dateStr}`);
     }
   };

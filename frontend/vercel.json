@@ -1,0 +1,7 @@
+{
+    "buildCommand": "npm run build",
+    "devCommand": "npm run start",
+    "installCommand": "npm install --legacy-peer-deps",
+    "framework": "create-react-app",
+    "outputDirectory": "build"
+  }

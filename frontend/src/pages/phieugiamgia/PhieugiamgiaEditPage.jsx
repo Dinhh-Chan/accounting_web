@@ -41,13 +41,12 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
+import * as locales from 'date-fns/locale';
 import { vi } from 'date-fns/locale';
-import axiosInstance from '../../utils/axios';
-import { API_ENDPOINTS } from '../../config/api';
+import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 import { format, parse } from 'date-fns';
-import API_ENDPOINTS from '../../config/api';
-import axios from 'axios';
+import { API_ENDPOINTS } from '../../config/api';
 import PageHeader from '../../components/PageHeader';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -385,6 +384,8 @@ const PhieugiamgiaEditPage = () => {
         });
       }
 
+      console.log('Phiếu giảm giá đã được lưu thành công:', response.data);
+      
       setAlert({
         show: true,
         message: id ? 'Cập nhật phiếu giảm giá thành công' : 'Tạo phiếu giảm giá thành công',
@@ -393,7 +394,13 @@ const PhieugiamgiaEditPage = () => {
 
       // Navigate back after a short delay
       setTimeout(() => {
-        navigate('/phieugiamgia', { state: { refreshData: true } });
+        console.log('Chuyển về trang danh sách với yêu cầu làm mới dữ liệu');
+        navigate('/phieugiamgia', { 
+          state: { 
+            refreshData: true,
+            lastUpdated: new Date().getTime()
+          } 
+        });
       }, 1500);
     } catch (error) {
       console.error("Error saving voucher:", error);
@@ -462,7 +469,7 @@ const PhieugiamgiaEditPage = () => {
           </Grid>
           
           <Grid item xs={12} md={6}>
-            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={viLocale}>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={locales.vi}>
               <DatePicker
                 label="Ngày lập"
                 value={formState.ngaylap}

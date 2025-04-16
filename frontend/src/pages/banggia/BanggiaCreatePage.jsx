@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import * as locales from 'date-fns/locale';
 import {
   Box,
   Card,

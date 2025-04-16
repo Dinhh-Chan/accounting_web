@@ -1,1021 +1,666 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Paper,
-  Typography,
-  TextField,
-  Button,
-  Grid,
-  Divider,
-  IconButton,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  MenuItem,
-  Alert,
-  CircularProgress,
-  InputAdornment,
-  Autocomplete,
-  FormControl,
-  InputLabel,
-  Select,
-  Card,
-  CardContent,
-  Fade,
-  Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  ListItem,
-  ListItemText,
-  List,
-  ListItemButton,
-  Avatar
-} from '@mui/material';
-import { 
-  Delete as DeleteIcon, 
-  Add as AddIcon, 
-  Description as DescriptionIcon, 
-  AccountBalance as AccountIcon,
-  ReceiptLong as ReceiptIcon,
-  Person as PersonIcon,
-  Search as SearchIcon,
-  Close as CloseIcon
-} from '@mui/icons-material';
-import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { vi } from 'date-fns/locale';
 import { useNavigate, useParams } from 'react-router-dom';
-import axiosInstance from '../../utils/axios';
-import { API_ENDPOINTS } from '../../config/api';
-import styled from '@emotion/styled';
+import { Form, Input, DatePicker, Select, Button, Table, InputNumber, Space, Card, Divider, Typography, message, Row, Col } from 'antd';
+import { PlusOutlined, DeleteOutlined, SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import axios from 'axios';
+import moment from 'moment';
+import { formatCurrency } from '../../utils/format';
 
-const paymentMethods = [
-  { value: 'Tiền mặt', label: 'Tiền mặt' },
-  { value: 'Chuyển khoản', label: 'Chuyển khoản' },
-  { value: 'Thẻ tín dụng', label: 'Thẻ tín dụng' },
-];
+const { Title } = Typography;
+const { TextArea } = Input;
+const { Option } = Select;
 
-const formatCurrency = (amount) => {
-  if (!amount) return '0';
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
-};
-
-const calculateTotal = (items) => {
-  if (!items || items.length === 0) return 0;
-  return items.reduce((total, item) => total + (item.soluong * item.dongia || 0), 0);
-};
-
-const calculateVAT = (amount, vatRate) => {
-  if (!amount || !vatRate) return 0;
-  return amount * (vatRate / 100);
-};
-
-const calculateDiscount = (amount, discountRate) => {
-  if (!amount || !discountRate) return 0;
-  return amount * (discountRate / 100);
-};
-
-const calculateGrandTotal = (amount, vat, discount) => {
-  return amount + vat - discount;
-};
-
-const PageContainer = styled(Box)(({ theme }) => ({
-  maxWidth: '1200px',
-  margin: '0 auto',
-  padding: theme.spacing(3),
-}));
-
-const StyledCard = styled(Card)(({ theme }) => ({
-  marginBottom: theme.spacing(4),
-  borderRadius: theme.spacing(1.5),
-  boxShadow: '0 6px 12px rgba(0, 0, 0, 0.08)',
-  overflow: 'visible',
-  transition: 'all 0.3s ease',
-  border: '1px solid rgba(0, 0, 0, 0.05)',
-}));
-
-const CardHeader = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(2, 3),
-  backgroundColor: theme.palette.primary.main,
-  color: theme.palette.primary.contrastText,
-  borderTopLeftRadius: theme.spacing(1.5),
-  borderTopRightRadius: theme.spacing(1.5),
+// CSS cho layout chính
+const flexContainerStyle = {
   display: 'flex',
-  alignItems: 'center',
-  gap: theme.spacing(1.5),
-}));
+  gap: '20px',
+  flexWrap: 'wrap'
+};
 
-const StyledCardContent = styled(CardContent)(({ theme }) => ({
-  padding: theme.spacing(3),
-}));
+const formSectionStyle = {
+  flex: '1',
+  minWidth: '300px',
+  padding: '16px',
+  border: '1px solid #eaeaea',
+  borderRadius: '8px'
+};
 
-const TableContainer = styled(Box)(({ theme }) => ({
+const fullWidthSectionStyle = {
   width: '100%',
-  overflowX: 'auto',
-  '& .MuiTable-root': {
-    borderCollapse: 'separate',
-    borderSpacing: '0 8px',
-  },
-  '& .MuiTableHead-root .MuiTableRow-root': {
-    backgroundColor: 'transparent',
-  },
-  '& .MuiTableHead-root .MuiTableCell-root': {
-    fontWeight: 600,
-    borderBottom: `2px solid ${theme.palette.divider}`,
-    padding: theme.spacing(1.5),
-  },
-  '& .MuiTableBody-root .MuiTableRow-root': {
-    backgroundColor: 'rgba(0, 0, 0, 0.01)',
-    transition: 'background-color 0.2s',
-    '&:hover': {
-      backgroundColor: 'rgba(0, 0, 0, 0.03)',
-    },
-  },
-  '& .MuiTableBody-root .MuiTableCell-root': {
-    padding: theme.spacing(1.5),
-    border: 'none',
-    borderBottom: `1px solid ${theme.palette.divider}`,
-  },
-}));
+  padding: '16px',
+  border: '1px solid #eaeaea',
+  borderRadius: '8px',
+  marginTop: '20px'
+};
 
-const SummaryContainer = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
-  backgroundColor: theme.palette.grey[50],
-  borderRadius: theme.spacing(1.5),
-  border: `1px solid ${theme.palette.divider}`,
-}));
+const formGroupStyle = {
+  marginBottom: '16px'
+};
 
-const SummaryRow = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'space-between',
-  padding: theme.spacing(1, 0),
-  '&:not(:last-child)': {
-    borderBottom: `1px dashed ${theme.palette.divider}`,
-  },
-}));
+const formLabelStyle = {
+  display: 'block',
+  marginBottom: '8px',
+  fontWeight: '500'
+};
 
-const FormTitle = styled(Typography)(({ theme }) => ({
-  marginBottom: theme.spacing(4),
-  fontWeight: 700,
-  fontSize: '1.8rem',
-  color: theme.palette.primary.main,
-  position: 'relative',
-  paddingBottom: theme.spacing(1),
-  '&:after': {
-    content: '""',
-    position: 'absolute',
-    left: 0,
-    bottom: 0,
-    width: '60px',
-    height: '4px',
-    backgroundColor: theme.palette.primary.main,
-    borderRadius: '2px',
-  },
-}));
-
-const AddButton = styled(Button)(({ theme }) => ({
-  marginTop: theme.spacing(2),
-  backgroundColor: 'rgba(0, 0, 0, 0.04)',
-  '&:hover': {
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-  },
-}));
-
-const ActionButtons = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'flex-end',
-  gap: theme.spacing(2),
-  marginTop: theme.spacing(4),
-}));
-
-const TotalAmount = styled(Typography)(({ theme }) => ({
-  fontSize: '1.25rem',
-  fontWeight: 700,
-  color: theme.palette.success.dark,
-}));
-
-const SearchField = styled(TextField)(({ theme }) => ({
-  marginBottom: theme.spacing(2),
-  '& .MuiOutlinedInput-root': {
-    paddingRight: 0,
-    '& fieldset': {
-      borderColor: theme.palette.divider,
-    },
-    '&:hover fieldset': {
-      borderColor: theme.palette.primary.main,
-    },
-    '&.Mui-focused fieldset': {
-      borderColor: theme.palette.primary.main,
-    },
-  },
-}));
-
-const CustomerListItem = styled(ListItemButton)(({ theme }) => ({
-  borderRadius: theme.spacing(1),
-  marginBottom: theme.spacing(0.5),
-  '&:hover': {
-    backgroundColor: theme.palette.primary.lighter || 'rgba(0, 127, 255, 0.08)',
-  },
-  '&.Mui-selected': {
-    backgroundColor: theme.palette.primary.lighter || 'rgba(0, 127, 255, 0.12)',
-    '&:hover': {
-      backgroundColor: theme.palette.primary.lighter || 'rgba(0, 127, 255, 0.18)',
-    },
-  },
-}));
-
-const CustomerAvatar = styled(Avatar)(({ theme }) => ({
-  backgroundColor: theme.palette.primary.main,
-  width: 32,
-  height: 32,
-  fontSize: '1rem',
-}));
-
-const CustomerSelectionField = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: theme.spacing(1),
-  border: `1px solid ${theme.palette.divider}`,
-  borderRadius: theme.shape.borderRadius,
-  padding: theme.spacing(1, 1.5),
-  minHeight: '40px',
-  cursor: 'pointer',
-  backgroundColor: theme.palette.background.paper,
-  transition: 'border-color 0.2s, box-shadow 0.2s',
-  '&:hover': {
-    borderColor: theme.palette.text.primary,
-  },
-  '&:focus': {
-    borderColor: theme.palette.primary.main,
-    boxShadow: `0 0 0 1px ${theme.palette.primary.main}`,
-    outline: 'none',
-  },
-}));
+const requiredLabelStyle = {
+  color: 'red',
+  marginLeft: '4px'
+};
 
 const HoadonFormPage = () => {
-  const navigate = useNavigate();
-  const { id } = useParams();
-  const isEdit = Boolean(id);
-
-  // State for invoice header
-  const [invoice, setInvoice] = useState({
-    soct: '',
-    ngaylap: new Date(),
-    makh: '',
-    tenkh: '',
+  // Thay vì sử dụng Form.useForm()
+  const [formValues, setFormValues] = useState({
+    ngaylap: moment(),
     hinhthuctt: 'Tiền mặt',
-    tkno: '',
-    diengiai: '',
-    tkcodt: '',
-    tkcothue: '',
-    thuesuat: '10',
-    tyleck: '0',
-    tkchietkhau: '',
+    thuesuat: '10%',
+    tiendt: 0,
+    tienthue: 0,
+    tienck: 0,
+    tientt: 0
   });
-
-  // State for invoice line items
-  const [items, setItems] = useState([
-    { maspdv: '', soluong: 1, dvt: '', dongia: 0 }
-  ]);
-
-  // State for customers and products
-  const [customers, setCustomers] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [accounts, setAccounts] = useState([]);
-
-  // UI states
+  
+  const navigate = useNavigate();
+  const { soct } = useParams();
+  const isEditing = !!soct;
+  
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  // Add dialog state for customer selection
-  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
-  const [customerSearch, setCustomerSearch] = useState('');
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [khachHangList, setKhachHangList] = useState([]);
+  const [sanPhamList, setSanPhamList] = useState([]);
+  const [taiKhoanList, setTaiKhoanList] = useState([]);
+  const [chiTietHoaDon, setChiTietHoaDon] = useState([]);
   
-  // Filter customers based on search term
-  const filteredCustomers = customers.filter(
-    (customer) => 
-      customer.makh.toLowerCase().includes(customerSearch.toLowerCase()) ||
-      customer.tenkh.toLowerCase().includes(customerSearch.toLowerCase())
-  );
-  
-  // Computed values
-  const subtotal = calculateTotal(items);
-  const vatAmount = calculateVAT(subtotal, parseFloat(invoice.thuesuat));
-  const discountAmount = calculateDiscount(subtotal, parseFloat(invoice.tyleck));
-  const grandTotal = calculateGrandTotal(subtotal, vatAmount, discountAmount);
+  // Các giá trị tính toán
+  const [tongTienHang, setTongTienHang] = useState(0);
+  const [tienThue, setTienThue] = useState(0);
+  const [tienChietKhau, setTienChietKhau] = useState(0);
+  const [tongThanhToan, setTongThanhToan] = useState(0);
 
+  // Lấy dữ liệu ban đầu
   useEffect(() => {
-    loadFormData();
-    
-    if (isEdit) {
-      fetchInvoice();
-    }
-  }, [id]);
-
-  const loadFormData = async () => {
-    try {
+    const fetchData = async () => {
       setLoading(true);
-      
-      // Fetch customers
-      const customerResponse = await axiosInstance.get(API_ENDPOINTS.CUSTOMERS);
-      if (Array.isArray(customerResponse.data)) {
-        setCustomers(customerResponse.data);
-      } else if (customerResponse.data && Array.isArray(customerResponse.data.items)) {
-        setCustomers(customerResponse.data.items);
-      }
-      
-      // Fetch products
-      const productResponse = await axiosInstance.get(API_ENDPOINTS.PRODUCTS);
-      if (Array.isArray(productResponse.data)) {
-        setProducts(productResponse.data);
-      } else if (productResponse.data && Array.isArray(productResponse.data.items)) {
-        setProducts(productResponse.data.items);
-      }
-      
-      // Fetch accounts
-      const accountResponse = await axiosInstance.get(API_ENDPOINTS.ACCOUNTS);
-      if (Array.isArray(accountResponse.data)) {
-        setAccounts(accountResponse.data);
-      } else if (accountResponse.data && Array.isArray(accountResponse.data.items)) {
-        setAccounts(accountResponse.data.items);
-      }
-      
-    } catch (error) {
-      console.error('Error loading form data:', error);
-      setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchInvoice = async () => {
-    try {
-      setLoading(true);
-      const response = await axiosInstance.get(API_ENDPOINTS.INVOICE_DETAIL(id));
-      console.log('Invoice detail response:', response.data);
-      
-      if (response.data) {
-        // Check if the API returns an object with hoa_don or the invoice directly
-        const invoiceData = response.data.hoa_don || response.data;
-        const invoiceItems = response.data.chi_tiet || [];
+      try {
+        // Lấy danh sách khách hàng
+        const khRes = await axios.get('/api/v1/khachhang/');
+        setKhachHangList(khRes.data);
         
-        setInvoice({
-          soct: invoiceData.soct,
-          ngaylap: new Date(invoiceData.ngaylap),
-          makh: invoiceData.makh,
-          tenkh: invoiceData.tenkh,
-          hinhthuctt: invoiceData.hinhthuctt,
-          tkno: invoiceData.tkno,
-          diengiai: invoiceData.diengiai,
-          tkcodt: invoiceData.tkcodt,
-          tkcothue: invoiceData.tkcothue,
-          thuesuat: invoiceData.thuesuat.toString(),
-          tyleck: invoiceData.tyleck ? invoiceData.tyleck.toString() : '0',
-          tkchietkhau: invoiceData.tkchietkhau || '',
-        });
+        // Lấy danh sách sản phẩm/dịch vụ
+        const spRes = await axios.get('/api/v1/sanpham/');
+        setSanPhamList(spRes.data);
         
-        if (invoiceItems.length > 0) {
-          setItems(invoiceItems);
+        // Lấy danh sách tài khoản kế toán
+        const tkRes = await axios.get('/api/v1/tkkt/');
+        setTaiKhoanList(tkRes.data);
+        
+        // Nếu đang chỉnh sửa, lấy dữ liệu hóa đơn
+        if (isEditing) {
+          const hdRes = await axios.get(`/api/v1/hoadon/${soct}`);
+          const { hoa_don, chi_tiet } = hdRes.data;
+          
+          setFormValues({
+            ...hoa_don,
+            ngaylap: moment(hoa_don.ngaylap)
+          });
+          
+          setChiTietHoaDon(chi_tiet.map((item, index) => ({
+            ...item,
+            key: index,
+          })));
         }
+      } catch (error) {
+        message.error('Không thể tải dữ liệu: ' + error.message);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching invoice:', error);
-      setError(`Không thể tải thông tin hóa đơn: ${error.response?.data?.detail || error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    
+    fetchData();
+  }, [isEditing, soct]);
 
-  const handleInvoiceChange = (e) => {
-    const { name, value } = e.target;
-    setInvoice(prev => ({
+  // Tính toán các giá trị khi chi tiết hóa đơn thay đổi
+  useEffect(() => {
+    // Tính tổng tiền hàng
+    const tongTien = chiTietHoaDon.reduce((total, item) => {
+      return total + (item.soluong * item.dongia || 0);
+    }, 0);
+    setTongTienHang(tongTien);
+    
+    // Tính tiền thuế
+    const thueStr = formValues.thuesuat || '0%';
+    const thueSuat = parseInt(thueStr.replace('%', '')) / 100;
+    const tienThueCalc = tongTien * thueSuat;
+    setTienThue(tienThueCalc);
+    
+    // Tính tiền chiết khấu
+    const tyleCK = formValues.tyleck || '0%';
+    const ckSuat = parseInt(tyleCK.replace('%', '')) / 100;
+    const tienCK = tongTien * ckSuat;
+    setTienChietKhau(tienCK);
+    
+    // Tính tổng thanh toán
+    const tongTT = tongTien + tienThueCalc - tienCK;
+    setTongThanhToan(tongTT);
+    
+    // Cập nhật formValues
+    setFormValues(prev => ({
+      ...prev,
+      tiendt: tongTien,
+      tienthue: tienThueCalc,
+      tienck: tienCK,
+      tientt: tongTT
+    }));
+  }, [chiTietHoaDon, formValues.thuesuat, formValues.tyleck]);
+
+  // Xử lý thay đổi giá trị form
+  const handleFormChange = (name, value) => {
+    setFormValues(prev => ({
       ...prev,
       [name]: value
     }));
   };
 
-  const handleOpenCustomerDialog = () => {
-    setCustomerDialogOpen(true);
-    
-    // If we already have a selected customer, find it in the list to pre-select
-    if (invoice.makh) {
-      const customer = customers.find(c => c.makh === invoice.makh);
-      if (customer) {
-        setSelectedCustomer(customer);
-      }
-    }
-  };
-  
-  const handleCloseCustomerDialog = () => {
-    setCustomerDialogOpen(false);
-  };
-  
-  const handleSelectCustomer = (customer) => {
-    setSelectedCustomer(customer);
-    setInvoice(prev => ({
-      ...prev,
-      makh: customer.makh,
-      tenkh: customer.tenkh
-    }));
-    handleCloseCustomerDialog();
-  };
-
-  const handleItemChange = (index, field, value) => {
-    const updatedItems = [...items];
-    updatedItems[index][field] = value;
-    
-    // If product is selected, update related fields
-    if (field === 'maspdv' && value) {
-      const product = products.find(p => p.maspdv === value);
-      if (product) {
-        updatedItems[index].dvt = product.dvt;
-        updatedItems[index].dongia = product.dongia;
-      }
-    }
-    
-    setItems(updatedItems);
-  };
-
-  const addNewItem = () => {
-    setItems([...items, { maspdv: '', soluong: 1, dvt: '', dongia: 0 }]);
-  };
-
-  const removeItem = (index) => {
-    if (items.length > 1) {
-      const updatedItems = [...items];
-      updatedItems.splice(index, 1);
-      setItems(updatedItems);
+  // Xử lý khi chọn khách hàng
+  const handleKhachHangChange = (makh) => {
+    const khachHang = khachHangList.find(kh => kh.makh === makh);
+    if (khachHang) {
+      handleFormChange('makh', makh);
+      handleFormChange('tenkh', khachHang.tenkh);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccess('');
-    
-    // Prepare data for submission
-    const formData = {
-      ...invoice,
-      tiendt: subtotal,
-      tienthue: vatAmount,
-      tienck: discountAmount,
-      tientt: grandTotal,
-      chi_tiet: items
+  // Xử lý khi thay đổi thuế suất hoặc tỷ lệ chiết khấu
+  const handleRateChange = (name, value) => {
+    handleFormChange(name, value);
+  };
+
+  // Thêm một dòng chi tiết hóa đơn mới
+  const handleAddDetail = () => {
+    const newDetail = {
+      key: chiTietHoaDon.length,
+      maspdv: '',
+      tensp: '',
+      dvt: '',
+      soluong: 1,
+      dongia: 0,
+      thanhtien: 0
     };
+    setChiTietHoaDon([...chiTietHoaDon, newDetail]);
+  };
+
+  // Xóa một dòng chi tiết hóa đơn
+  const handleDeleteDetail = (key) => {
+    setChiTietHoaDon(chiTietHoaDon.filter(item => item.key !== key));
+  };
+
+  // Cập nhật dữ liệu một dòng chi tiết
+  const handleDetailChange = (key, field, value) => {
+    const newData = [...chiTietHoaDon];
+    const index = newData.findIndex(item => item.key === key);
     
-    // Log data for debugging
-    console.log('Submitting invoice data:', formData);
+    if (index > -1) {
+      const item = newData[index];
+      
+      // Nếu thay đổi mã sản phẩm, cập nhật tên và đơn vị tính
+      if (field === 'maspdv') {
+        const sanPham = sanPhamList.find(sp => sp.maspdv === value);
+        if (sanPham) {
+          newData[index] = {
+            ...item,
+            maspdv: value,
+            tensp: sanPham.tensp,
+            dvt: sanPham.dvt,
+            dongia: sanPham.dongia || item.dongia
+          };
+        }
+      } else {
+        newData[index] = { ...item, [field]: value };
+      }
+      
+      // Tính lại thành tiền
+      if (field === 'soluong' || field === 'dongia') {
+        newData[index].thanhtien = newData[index].soluong * newData[index].dongia;
+      }
+      
+      setChiTietHoaDon(newData);
+    }
+  };
+
+  // Xử lý khi submit form
+  const handleSubmit = async () => {
+    if (chiTietHoaDon.length === 0) {
+      message.error('Vui lòng thêm ít nhất một sản phẩm vào hóa đơn');
+      return;
+    }
+    
+    setSaving(true);
     
     try {
-      let response;
-      if (isEdit) {
-        response = await axiosInstance.put(
-          API_ENDPOINTS.INVOICE_DETAIL(id),
-          formData
-        );
-        console.log('Update invoice response:', response.data);
-        setSuccess('Cập nhật hóa đơn thành công');
+      const hoaDonData = {
+        ...formValues,
+        ngaylap: formValues.ngaylap.format('YYYY-MM-DD HH:mm:ss'),
+        chi_tiet: chiTietHoaDon.map(({ key, ...item }) => item) // Loại bỏ key
+      };
+      
+      if (isEditing) {
+        await axios.put(`/api/v1/hoadon/${soct}`, hoaDonData);
+        message.success('Cập nhật hóa đơn thành công');
       } else {
-        response = await axiosInstance.post(
-          API_ENDPOINTS.INVOICES,
-          formData
-        );
-        console.log('Create invoice response:', response.data);
-        setSuccess('Tạo hóa đơn thành công');
+        await axios.post('/api/v1/hoadon/', hoaDonData);
+        message.success('Tạo hóa đơn mới thành công');
       }
       
-      // Navigate after success
-      setTimeout(() => {
-        navigate('/hoadon');
-      }, 1500);
+      navigate('/hoadon');
     } catch (error) {
-      console.error('Error saving invoice:', error);
-      setError(
-        error.response?.data?.detail || 
-        error.response?.data?.message || 
-        error.message || 
-        'Có lỗi xảy ra khi lưu hóa đơn'
-      );
+      message.error('Lỗi khi lưu hóa đơn: ' + error.message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  if (loading && isEdit) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="400px">
-        <CircularProgress />
-      </Box>
-    );
-  }
+  // Cấu hình bảng chi tiết hóa đơn
+  const columns = [
+    {
+      title: 'Mã SP/DV',
+      dataIndex: 'maspdv',
+      key: 'maspdv',
+      width: '15%',
+      render: (text, record) => (
+        <Select 
+          style={{ width: '100%' }}
+          value={text}
+          onChange={(value) => handleDetailChange(record.key, 'maspdv', value)}
+          showSearch
+          optionFilterProp="children"
+        >
+          {sanPhamList.map(sp => (
+            <Option key={sp.maspdv} value={sp.maspdv}>{sp.maspdv} - {sp.tensp}</Option>
+          ))}
+        </Select>
+      )
+    },
+    {
+      title: 'Tên SP/DV',
+      dataIndex: 'tensp',
+      key: 'tensp',
+      width: '25%'
+    },
+    {
+      title: 'ĐVT',
+      dataIndex: 'dvt',
+      key: 'dvt',
+      width: '10%'
+    },
+    {
+      title: 'Số lượng',
+      dataIndex: 'soluong',
+      key: 'soluong',
+      width: '10%',
+      render: (text, record) => (
+        <InputNumber
+          min={1}
+          style={{ width: '100%' }}
+          value={text}
+          onChange={(value) => handleDetailChange(record.key, 'soluong', value)}
+        />
+      )
+    },
+    {
+      title: 'Đơn giá',
+      dataIndex: 'dongia',
+      key: 'dongia',
+      width: '15%',
+      render: (text, record) => (
+        <InputNumber
+          min={0}
+          style={{ width: '100%' }}
+          value={text}
+          formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+          parser={value => value.replace(/\$\s?|(,*)/g, '')}
+          onChange={(value) => handleDetailChange(record.key, 'dongia', value)}
+        />
+      )
+    },
+    {
+      title: 'Thành tiền',
+      dataIndex: 'thanhtien',
+      key: 'thanhtien',
+      width: '15%',
+      render: (_, record) => formatCurrency(record.soluong * record.dongia || 0)
+    },
+    {
+      title: '',
+      key: 'action',
+      width: '10%',
+      render: (_, record) => (
+        <Button 
+          type="text" 
+          danger 
+          icon={<DeleteOutlined />} 
+          onClick={() => handleDeleteDetail(record.key)}
+        />
+      )
+    }
+  ];
 
   return (
-    <PageContainer>
-      <FormTitle variant="h5">
-        {isEdit ? 'Chỉnh sửa hóa đơn' : 'Tạo hóa đơn mới'}
-      </FormTitle>
-      
-      {error && (
-        <Fade in={!!error}>
-          <Alert severity="error" sx={{ mb: 3, borderRadius: 1 }} variant="filled">
-            {error}
-          </Alert>
-        </Fade>
-      )}
-      
-      {success && (
-        <Fade in={!!success}>
-          <Alert severity="success" sx={{ mb: 3, borderRadius: 1 }} variant="filled">
-            {success}
-          </Alert>
-        </Fade>
-      )}
-      
-      <form onSubmit={handleSubmit}>
-        <StyledCard>
-          <CardHeader>
-            <DescriptionIcon />
-            <Typography variant="h6" fontWeight={600}>
-              Thông tin hóa đơn
-            </Typography>
-          </CardHeader>
-          
-          <StyledCardContent>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Số chứng từ"
-                  name="soct"
-                  value={invoice.soct}
-                  onChange={handleInvoiceChange}
-                  disabled={loading || isEdit}
-                  placeholder="Để trống để tự động tạo"
-                  variant="outlined"
-                  size="small"
+    <Card loading={loading}>
+      <Space direction="vertical" style={{ width: '100%' }} size="large">
+        <Space>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/hoadon')}>
+            Quay lại
+          </Button>
+          <Title level={2}>{isEditing ? 'Sửa hóa đơn' : 'Tạo hóa đơn mới'}</Title>
+        </Space>
+
+        <div>
+          {/* Layout chính với 3 phần */}
+          <div style={flexContainerStyle}>
+            {/* Phần 1: Thông tin chung */}
+            <div style={formSectionStyle}>
+              <Title level={4}>Thông tin chung</Title>
+              
+              <div style={formGroupStyle}>
+                <label style={formLabelStyle} htmlFor="ngaylap">
+                  Ngày lập<span style={requiredLabelStyle}>*</span>
+                </label>
+                <DatePicker 
+                  id="ngaylap"
+                  format="DD/MM/YYYY"
+                  style={{ width: '100%' }}
+                  disabled={isEditing}
+                  value={formValues.ngaylap}
+                  onChange={(date) => handleFormChange('ngaylap', date)}
                 />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={vi}>
-                  <DatePicker
-                    label="Ngày lập"
-                    value={invoice.ngaylap}
-                    onChange={(newValue) => setInvoice({...invoice, ngaylap: newValue})}
-                    slotProps={{ 
-                      textField: { 
-                        size: "small", 
-                        fullWidth: true,
-                        required: true 
-                      } 
-                    }}
-                    disabled={loading}
-                  />
-                </LocalizationProvider>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <FormControl fullWidth variant="outlined" size="small">
-                  <InputLabel 
-                    shrink 
-                    htmlFor="customer-selection" 
-                    sx={{ 
-                      backgroundColor: 'background.paper',
-                      padding: '0 8px',
-                      transform: 'translate(14px, -9px) scale(0.75)'
-                    }}
-                  >
-                    Khách hàng *
-                  </InputLabel>
-                  <CustomerSelectionField
-                    id="customer-selection"
-                    onClick={handleOpenCustomerDialog}
-                    tabIndex={0}
-                    onKeyPress={(e) => e.key === 'Enter' && handleOpenCustomerDialog()}
-                    sx={{ 
-                      borderColor: invoice.makh ? 'primary.main' : 'divider',
-                      ...(invoice.makh ? { borderWidth: '1px' } : {})
-                    }}
-                  >
-                    {invoice.makh ? (
-                      <>
-                        <CustomerAvatar>
-                          {invoice.tenkh.charAt(0).toUpperCase()}
-                        </CustomerAvatar>
-                        <Box sx={{ flexGrow: 1 }}>
-                          <Typography variant="subtitle2">
-                            {invoice.tenkh}
-                          </Typography>
-                          <Typography variant="caption" color="textSecondary">
-                            Mã KH: {invoice.makh}
-                          </Typography>
-                        </Box>
-                      </>
-                    ) : (
-                      <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary' }}>
-                        <PersonIcon sx={{ mr: 1 }} />
-                        <Typography>Chọn khách hàng</Typography>
-                      </Box>
-                    )}
-                  </CustomerSelectionField>
-                </FormControl>
-                
-                {/* Customer selection dialog */}
-                <Dialog 
-                  open={customerDialogOpen} 
-                  onClose={handleCloseCustomerDialog}
-                  maxWidth="sm"
-                  fullWidth
+              </div>
+
+              <div style={formGroupStyle}>
+                <label style={formLabelStyle} htmlFor="hinhthuctt">
+                  Hình thức thanh toán<span style={requiredLabelStyle}>*</span>
+                </label>
+                <Select
+                  id="hinhthuctt"
+                  style={{ width: '100%' }}
+                  value={formValues.hinhthuctt}
+                  onChange={(value) => handleFormChange('hinhthuctt', value)}
                 >
-                  <DialogTitle>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="h6">Chọn khách hàng</Typography>
-                      <IconButton edge="end" onClick={handleCloseCustomerDialog} aria-label="close">
-                        <CloseIcon />
-                      </IconButton>
-                    </Box>
-                  </DialogTitle>
-                  <DialogContent dividers>
-                    <SearchField
-                      fullWidth
-                      placeholder="Tìm kiếm khách hàng theo mã hoặc tên..."
-                      value={customerSearch}
-                      onChange={(e) => setCustomerSearch(e.target.value)}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <SearchIcon />
-                          </InputAdornment>
-                        ),
-                        endAdornment: customerSearch && (
-                          <InputAdornment position="end">
-                            <IconButton
-                              aria-label="clear search"
-                              onClick={() => setCustomerSearch('')}
-                              edge="end"
-                              size="small"
-                            >
-                              <CloseIcon fontSize="small" />
-                            </IconButton>
-                          </InputAdornment>
-                        ),
-                      }}
-                      variant="outlined"
-                      size="small"
-                    />
-                    
-                    <Box sx={{ height: '400px', overflow: 'auto' }}>
-                      <List>
-                        {filteredCustomers.length > 0 ? (
-                          filteredCustomers.map((customer) => (
-                            <CustomerListItem
-                              key={customer.makh}
-                              selected={selectedCustomer?.makh === customer.makh}
-                              onClick={() => handleSelectCustomer(customer)}
-                            >
-                              <CustomerAvatar>
-                                {customer.tenkh.charAt(0).toUpperCase()}
-                              </CustomerAvatar>
-                              <ListItemText
-                                primary={customer.tenkh}
-                                secondary={`Mã KH: ${customer.makh}`}
-                                primaryTypographyProps={{ fontWeight: 500 }}
-                              />
-                            </CustomerListItem>
-                          ))
-                        ) : (
-                          <ListItem>
-                            <ListItemText 
-                              primary="Không tìm thấy khách hàng"
-                              secondary="Thử tìm kiếm với từ khóa khác"
-                            />
-                          </ListItem>
-                        )}
-                      </List>
-                    </Box>
-                  </DialogContent>
-                  <DialogActions>
-                    <Button onClick={handleCloseCustomerDialog}>Đóng</Button>
-                    <Button 
-                      variant="contained" 
-                      disabled={!selectedCustomer}
-                      onClick={() => selectedCustomer && handleSelectCustomer(selectedCustomer)}
-                    >
-                      Xác nhận
-                    </Button>
-                  </DialogActions>
-                </Dialog>
-              </Grid>
+                  <Option value="Tiền mặt">Tiền mặt</Option>
+                  <Option value="Chuyển khoản">Chuyển khoản</Option>
+                  <Option value="Thẻ tín dụng">Thẻ tín dụng</Option>
+                </Select>
+              </div>
+
+              <div style={formGroupStyle}>
+                <label style={formLabelStyle} htmlFor="makh">
+                  Khách hàng<span style={requiredLabelStyle}>*</span>
+                </label>
+                <Select
+                  id="makh"
+                  showSearch
+                  placeholder="Chọn khách hàng"
+                  optionFilterProp="children"
+                  style={{ width: '100%' }}
+                  value={formValues.makh}
+                  onChange={handleKhachHangChange}
+                >
+                  {khachHangList.map(kh => (
+                    <Option key={kh.makh} value={kh.makh}>{kh.makh} - {kh.tenkh}</Option>
+                  ))}
+                </Select>
+              </div>
+
+              <div style={formGroupStyle}>
+                <label style={formLabelStyle} htmlFor="tenkh">
+                  Tên khách hàng<span style={requiredLabelStyle}>*</span>
+                </label>
+                <Input 
+                  id="tenkh"
+                  value={formValues.tenkh} 
+                  onChange={(e) => handleFormChange('tenkh', e.target.value)}
+                  disabled
+                />
+              </div>
+
+              <div style={formGroupStyle}>
+                <label style={formLabelStyle} htmlFor="nguoinhan">
+                  Người nhận
+                </label>
+                <Input 
+                  id="nguoinhan"
+                  value={formValues.nguoinhan} 
+                  onChange={(e) => handleFormChange('nguoinhan', e.target.value)}
+                />
+              </div>
+
+              <div style={formGroupStyle}>
+                <label style={formLabelStyle} htmlFor="diachi">
+                  Địa chỉ
+                </label>
+                <Input 
+                  id="diachi"
+                  value={formValues.diachi} 
+                  onChange={(e) => handleFormChange('diachi', e.target.value)}
+                />
+              </div>
+
+              <div style={formGroupStyle}>
+                <label style={formLabelStyle} htmlFor="dienthoai">
+                  Điện thoại
+                </label>
+                <Input 
+                  id="dienthoai"
+                  value={formValues.dienthoai} 
+                  onChange={(e) => handleFormChange('dienthoai', e.target.value)}
+                />
+              </div>
+
+              <div style={formGroupStyle}>
+                <label style={formLabelStyle} htmlFor="diengiai">
+                  Diễn giải
+                </label>
+                <TextArea 
+                  id="diengiai"
+                  rows={3} 
+                  value={formValues.diengiai}
+                  onChange={(e) => handleFormChange('diengiai', e.target.value)}
+                  placeholder="Nội dung thanh toán..."
+                />
+              </div>
+            </div>
+
+            {/* Phần 2: Thông tin kế toán */}
+            <div style={formSectionStyle}>
+              <Title level={4}>Thông tin kế toán</Title>
               
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth variant="outlined" size="small">
-                  <InputLabel id="hinhthuctt-label">Hình thức thanh toán</InputLabel>
+              <div style={formGroupStyle}>
+                <label style={formLabelStyle} htmlFor="tkno">
+                  TK Nợ<span style={requiredLabelStyle}>*</span>
+                </label>
+                <Select
+                  id="tkno"
+                  showSearch
+                  placeholder="Chọn tài khoản nợ"
+                  optionFilterProp="children"
+                  style={{ width: '100%' }}
+                  value={formValues.tkno}
+                  onChange={(value) => handleFormChange('tkno', value)}
+                >
+                  {taiKhoanList.map(tk => (
+                    <Option key={tk.matk} value={tk.matk}>{tk.matk} - {tk.tentk}</Option>
+                  ))}
+                </Select>
+              </div>
+
+              <div style={formGroupStyle}>
+                <label style={formLabelStyle} htmlFor="tkcodt">
+                  TK Có doanh thu<span style={requiredLabelStyle}>*</span>
+                </label>
+                <Select
+                  id="tkcodt"
+                  showSearch
+                  placeholder="Chọn tài khoản có"
+                  optionFilterProp="children"
+                  style={{ width: '100%' }}
+                  value={formValues.tkcodt}
+                  onChange={(value) => handleFormChange('tkcodt', value)}
+                >
+                  {taiKhoanList.map(tk => (
+                    <Option key={tk.matk} value={tk.matk}>{tk.matk} - {tk.tentk}</Option>
+                  ))}
+                </Select>
+              </div>
+
+              <div style={formGroupStyle}>
+                <label style={formLabelStyle} htmlFor="tkcothue">
+                  TK Có thuế<span style={requiredLabelStyle}>*</span>
+                </label>
+                <Select
+                  id="tkcothue"
+                  showSearch
+                  placeholder="Chọn tài khoản thuế"
+                  optionFilterProp="children"
+                  style={{ width: '100%' }}
+                  value={formValues.tkcothue}
+                  onChange={(value) => handleFormChange('tkcothue', value)}
+                >
+                  {taiKhoanList.map(tk => (
+                    <Option key={tk.matk} value={tk.matk}>{tk.matk} - {tk.tentk}</Option>
+                  ))}
+                </Select>
+              </div>
+
+              <div style={formGroupStyle}>
+                <label style={formLabelStyle} htmlFor="thuesuat">
+                  Thuế suất<span style={requiredLabelStyle}>*</span>
+                </label>
+                <Select
+                  id="thuesuat"
+                  style={{ width: '100%' }}
+                  value={formValues.thuesuat}
+                  onChange={(value) => handleRateChange('thuesuat', value)}
+                >
+                  <Option value="0%">0%</Option>
+                  <Option value="5%">5%</Option>
+                  <Option value="8%">8%</Option>
+                  <Option value="10%">10%</Option>
+                </Select>
+              </div>
+
+              <div style={formGroupStyle}>
+                <label style={formLabelStyle} htmlFor="tyleck">
+                  Tỷ lệ chiết khấu
+                </label>
+                <Select
+                  id="tyleck"
+                  style={{ width: '100%' }}
+                  value={formValues.tyleck}
+                  onChange={(value) => handleRateChange('tyleck', value)}
+                >
+                  <Option value="">Không có</Option>
+                  <Option value="5%">5%</Option>
+                  <Option value="10%">10%</Option>
+                  <Option value="15%">15%</Option>
+                  <Option value="20%">20%</Option>
+                </Select>
+              </div>
+
+              {formValues.tyleck && (
+                <div style={formGroupStyle}>
+                  <label style={formLabelStyle} htmlFor="tkchietkhau">
+                    TK Chiết khấu
+                  </label>
                   <Select
-                    labelId="hinhthuctt-label"
-                    name="hinhthuctt"
-                    value={invoice.hinhthuctt}
-                    onChange={handleInvoiceChange}
-                    label="Hình thức thanh toán"
-                    disabled={loading}
+                    id="tkchietkhau"
+                    showSearch
+                    placeholder="Chọn tài khoản chiết khấu"
+                    optionFilterProp="children"
+                    style={{ width: '100%' }}
+                    value={formValues.tkchietkhau}
+                    onChange={(value) => handleFormChange('tkchietkhau', value)}
                   >
-                    {paymentMethods.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
+                    {taiKhoanList.map(tk => (
+                      <Option key={tk.matk} value={tk.matk}>{tk.matk} - {tk.tentk}</Option>
                     ))}
                   </Select>
-                </FormControl>
-              </Grid>
+                </div>
+              )}
+
+              <Divider />
+
+              <div style={{ backgroundColor: '#f5f5f5', padding: '16px', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span>Tiền hàng:</span>
+                  <span style={{ fontWeight: 'bold' }}>{formatCurrency(formValues.tiendt)}</span>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span>Tiền thuế ({formValues.thuesuat}):</span>
+                  <span style={{ fontWeight: 'bold' }}>{formatCurrency(formValues.tienthue)}</span>
+                </div>
+                
+                {formValues.tyleck && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span>Chiết khấu ({formValues.tyleck}):</span>
+                    <span style={{ fontWeight: 'bold', color: '#ff4d4f' }}>- {formatCurrency(formValues.tienck)}</span>
+                  </div>
+                )}
+                
+                <Divider style={{ margin: '12px 0' }} />
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px' }}>
+                  <span style={{ fontWeight: 'bold' }}>Tổng thanh toán:</span>
+                  <span style={{ fontWeight: 'bold', color: '#2e7d32' }}>{formatCurrency(formValues.tientt)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Phần 3: Chi tiết hóa đơn */}
+            <div style={fullWidthSectionStyle}>
+              <Title level={4}>Chi tiết hóa đơn</Title>
               
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Tổng tiền"
-                  value={formatCurrency(grandTotal)}
-                  InputProps={{ 
-                    readOnly: true,
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Chip 
-                          label="Tổng" 
-                          size="small" 
-                          color="primary" 
-                          sx={{ height: '24px' }}
-                        />
-                      </InputAdornment>
-                    ),
-                  }}
-                  variant="outlined"
-                  size="small"
-                  sx={{ 
-                    '& .MuiInputBase-input': { 
-                      fontWeight: 'bold',
-                      color: 'success.main',
-                      fontSize: '1.1rem',
-                      textAlign: 'right'
-                    } 
-                  }}
-                />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Diễn giải"
-                  name="diengiai"
-                  value={invoice.diengiai}
-                  onChange={handleInvoiceChange}
-                  multiline
-                  rows={2}
-                  variant="outlined"
-                  size="small"
-                  placeholder="Nội dung thanh toán, ghi chú..."
-                />
-              </Grid>
-            </Grid>
-          </StyledCardContent>
-        </StyledCard>
-        
-        <StyledCard>
-          <CardHeader>
-            <ReceiptIcon />
-            <Typography variant="h6" fontWeight={600}>
-              Chi tiết hóa đơn
-            </Typography>
-          </CardHeader>
-          
-          <StyledCardContent>
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell width="35%">Sản phẩm/Dịch vụ</TableCell>
-                    <TableCell align="center" width="15%">Số lượng</TableCell>
-                    <TableCell align="center" width="15%">Đơn vị tính</TableCell>
-                    <TableCell align="right" width="15%">Đơn giá</TableCell>
-                    <TableCell align="right" width="15%">Thành tiền</TableCell>
-                    <TableCell width="5%"></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {items.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <TextField
-                          select
-                          value={item.maspdv}
-                          onChange={(e) => handleItemChange(index, 'maspdv', e.target.value)}
-                          fullWidth
-                          size="small"
-                          required
-                          disabled={loading}
-                          variant="outlined"
-                        >
-                          {products.map((product) => (
-                            <MenuItem key={product.maspdv} value={product.maspdv}>
-                              {product.maspdv} - {product.tenspdv}
-                            </MenuItem>
-                          ))}
-                        </TextField>
-                      </TableCell>
-                      <TableCell>
-                        <TextField
-                          type="number"
-                          value={item.soluong}
-                          onChange={(e) => handleItemChange(index, 'soluong', parseFloat(e.target.value))}
-                          size="small"
-                          inputProps={{ min: 0, step: "0.01" }}
-                          required
-                          disabled={loading}
-                          fullWidth
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <TextField
-                          value={item.dvt}
-                          onChange={(e) => handleItemChange(index, 'dvt', e.target.value)}
-                          size="small"
-                          required
-                          disabled={loading}
-                          fullWidth
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        <TextField
-                          type="number"
-                          value={item.dongia}
-                          onChange={(e) => handleItemChange(index, 'dongia', parseFloat(e.target.value))}
-                          size="small"
-                          inputProps={{ min: 0, step: "0.01" }}
-                          required
-                          disabled={loading}
-                          fullWidth
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography fontWeight="500">
-                          {formatCurrency(item.soluong * item.dongia)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <IconButton 
-                          size="small" 
-                          color="error" 
-                          onClick={() => removeItem(index)}
-                          disabled={items.length === 1 || loading}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            
-            <AddButton
-              startIcon={<AddIcon />}
-              onClick={addNewItem}
-              disabled={loading}
-              variant="outlined"
-              color="primary"
-              size="small"
-              sx={{ mt: 2 }}
-            >
-              Thêm dòng
-            </AddButton>
-          </StyledCardContent>
-        </StyledCard>
-        
-        <StyledCard>
-          <CardHeader>
-            <AccountIcon />
-            <Typography variant="h6" fontWeight={600}>
-              Thông tin thuế và tổng tiền
-            </Typography>
-          </CardHeader>
-          
-          <StyledCardContent>
-            <Grid container spacing={4}>
-              <Grid item xs={12} md={5}>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Thuế suất (%)"
-                      name="thuesuat"
-                      value={invoice.thuesuat}
-                      onChange={handleInvoiceChange}
-                      type="number"
-                      InputProps={{
-                        endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                      }}
-                      fullWidth
-                      size="small"
-                      required
-                      disabled={loading}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Tỷ lệ chiết khấu (%)"
-                      name="tyleck"
-                      value={invoice.tyleck}
-                      onChange={handleInvoiceChange}
-                      type="number"
-                      InputProps={{
-                        endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                      }}
-                      fullWidth
-                      size="small"
-                      disabled={loading}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      select
-                      label="TK Chiết khấu"
-                      name="tkchietkhau"
-                      value={invoice.tkchietkhau}
-                      onChange={handleInvoiceChange}
-                      fullWidth
-                      size="small"
-                      disabled={loading || parseFloat(invoice.tyleck) === 0}
-                    >
-                      {accounts.map((account) => (
-                        <MenuItem key={account.matk} value={account.matk}>
-                          {account.matk} - {account.tentk}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid>
-                </Grid>
-              </Grid>
-              
-              <Grid item xs={12} md={7}>
-                <SummaryContainer elevation={0}>
-                  <SummaryRow>
-                    <Typography variant="body1" fontWeight={500}>Tiền hàng:</Typography>
-                    <Typography variant="body1">{formatCurrency(subtotal)}</Typography>
-                  </SummaryRow>
-                  
-                  <SummaryRow>
-                    <Typography variant="body1" fontWeight={500}>
-                      Tiền thuế ({invoice.thuesuat}%):
-                    </Typography>
-                    <Typography variant="body1">{formatCurrency(vatAmount)}</Typography>
-                  </SummaryRow>
-                  
-                  {parseFloat(invoice.tyleck) > 0 && (
-                    <SummaryRow>
-                      <Typography variant="body1" fontWeight={500}>
-                        Chiết khấu ({invoice.tyleck}%):
-                      </Typography>
-                      <Typography variant="body1" color="error.main">
-                        - {formatCurrency(discountAmount)}
-                      </Typography>
-                    </SummaryRow>
-                  )}
-                  
-                  <SummaryRow sx={{ pt: 2 }}>
-                    <Typography variant="h6" fontWeight={600}>Tổng thanh toán:</Typography>
-                    <TotalAmount>{formatCurrency(grandTotal)}</TotalAmount>
-                  </SummaryRow>
-                </SummaryContainer>
-              </Grid>
-            </Grid>
-          </StyledCardContent>
-        </StyledCard>
-        
-        <ActionButtons>
-          <Button 
-            variant="outlined" 
-            onClick={() => navigate('/hoadon')}
-            sx={{ minWidth: '120px' }}
-          >
-            Hủy
-          </Button>
-          <Button 
-            type="submit" 
-            variant="contained" 
-            disabled={loading}
-            sx={{ minWidth: '120px' }}
-          >
-            {loading ? <CircularProgress size={24} /> : 'Lưu hóa đơn'}
-          </Button>
-        </ActionButtons>
-      </form>
-    </PageContainer>
+              <Button 
+                type="dashed" 
+                onClick={handleAddDetail} 
+                block 
+                icon={<PlusOutlined />}
+                style={{ marginBottom: '16px' }}
+              >
+                Thêm sản phẩm
+              </Button>
+
+              <Table
+                columns={columns}
+                dataSource={chiTietHoaDon}
+                pagination={false}
+                bordered
+                size="small"
+              />
+            </div>
+          </div>
+
+          <div style={{ marginTop: '24px', textAlign: 'right' }}>
+            <Space>
+              <Button 
+                onClick={() => navigate('/hoadon')}
+              >
+                Hủy
+              </Button>
+              <Button 
+                type="primary" 
+                onClick={handleSubmit} 
+                icon={<SaveOutlined />} 
+                loading={saving}
+                size="large"
+              >
+                {isEditing ? 'Cập nhật hóa đơn' : 'Tạo hóa đơn'}
+              </Button>
+            </Space>
+          </div>
+        </div>
+      </Space>
+    </Card>
   );
 };
 
-export default HoadonFormPage; 
+export default HoadonFormPage;

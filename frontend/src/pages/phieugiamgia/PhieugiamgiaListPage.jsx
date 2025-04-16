@@ -212,6 +212,9 @@ const PhieugiamgiaListPage = () => {
   useEffect(() => {
     if (location.state?.refreshData) {
       console.log('Phát hiện yêu cầu làm mới dữ liệu từ trang chỉnh sửa');
+      if (location.state?.lastUpdated) {
+        console.log('Timestamp cập nhật:', new Date(location.state.lastUpdated).toLocaleString());
+      }
       refreshData();
       // Xóa state để tránh refresh liên tục
       navigate(location.pathname, { replace: true, state: {} });

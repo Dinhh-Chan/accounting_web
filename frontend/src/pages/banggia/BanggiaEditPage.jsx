@@ -31,7 +31,7 @@ import { styled } from '@mui/material/styles';
 import { vi } from 'date-fns/locale';
 import axiosInstance from '../../utils/axios';
 import { API_ENDPOINTS } from '../../config/api';
-import { format, parseISO } from 'date-fns';
+import { format, parse } from 'date-fns';
 import * as locales from 'date-fns/locale';
 const StyledCard = styled(Card)(({ theme }) => ({
   margin: theme.spacing(2, 0),
@@ -128,7 +128,7 @@ const BanggiaEditPage = () => {
       // Cập nhật state với dữ liệu từ API
       setFormState({
         maspdv: priceData.maspdv,
-        ngayhl: parseISO(priceData.ngayhl),
+        ngayhl: parse(priceData.ngayhl, "yyyy-MM-dd", new Date()),
         giaban: priceData.giaban.toString()
       });
       

@@ -1,7 +1,8 @@
-from typing import Optional
+from typing import Optional, Union
 from datetime import datetime
 from decimal import Decimal
 from pydantic import BaseModel, Field, validator
+from dateutil import parser
 
 
 # Shared properties
@@ -15,6 +16,16 @@ class BangGiaBase(BaseModel):
         if v <= 0:
             raise ValueError('Giá bán phải lớn hơn 0')
         return v
+    
+    @validator('ngayhl', pre=True)
+    def parse_ngayhl(cls, v):
+        if isinstance(v, datetime):
+            return v
+        try:
+            # Chuyển đổi chuỗi ngày thành datetime
+            return parser.parse(v)
+        except Exception as e:
+            raise ValueError(f'Không thể chuyển đổi ngày: {e}')
 
 
 # Properties to receive on BangGia creation

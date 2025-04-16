@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import select, update, delete, func, and_, or_, asc, desc, text
 from sqlalchemy.sql.expression import Select
+from datetime import datetime
 
 from app.db.base_class import Base
 
@@ -260,7 +261,14 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         Returns:
             The created record
         """
-        obj_in_data = jsonable_encoder(obj_in)
+        obj_in_data = obj_in.dict()
+        
+        # Kiểm tra và xử lý các trường datetime để loại bỏ timezone
+        for key, value in obj_in_data.items():
+            if isinstance(value, datetime):
+                # Loại bỏ thông tin timezone từ datetime trước khi lưu vào database
+                obj_in_data[key] = value.replace(tzinfo=None)
+        
         db_obj = self.model(**obj_in_data)
         db.add(db_obj)
         await db.commit()
@@ -287,6 +295,12 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             update_data = obj_in
         else:
             update_data = obj_in.dict(exclude_unset=True)
+        
+        # Kiểm tra và xử lý các trường datetime để loại bỏ timezone
+        for key, value in update_data.items():
+            if isinstance(value, datetime):
+                # Loại bỏ thông tin timezone từ datetime trước khi cập nhật
+                update_data[key] = value.replace(tzinfo=None)
             
         for field in obj_data:
             if field in update_data:
@@ -396,7 +410,14 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db_objs = []
         
         for obj_in in objs_in:
-            obj_in_data = jsonable_encoder(obj_in)
+            obj_in_data = obj_in.dict()
+            
+            # Kiểm tra và xử lý các trường datetime để loại bỏ timezone
+            for key, value in obj_in_data.items():
+                if isinstance(value, datetime):
+                    # Loại bỏ thông tin timezone từ datetime trước khi lưu vào database
+                    obj_in_data[key] = value.replace(tzinfo=None)
+                    
             db_obj = self.model(**obj_in_data)
             db.add(db_obj)
             db_objs.append(db_obj)
@@ -423,6 +444,12 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             Number of records updated
         """
         update_data = obj_in.dict(exclude_unset=True) if not isinstance(obj_in, dict) else obj_in
+        
+        # Kiểm tra và xử lý các trường datetime để loại bỏ timezone
+        for key, value in update_data.items():
+            if isinstance(value, datetime):
+                # Loại bỏ thông tin timezone từ datetime trước khi cập nhật
+                update_data[key] = value.replace(tzinfo=None)
         
         stmt = (
             update(self.model)
@@ -484,19 +511,19 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         else:
             # Create new record
             return await self.create(db, obj_in=obj_in)
-    async def filter_by_arrays(
-    self, 
-    db: Session, 
-    *, 
-    array_filters: Dict[str, List[Any]] = None,
-    exact_filters: Dict[str, Any] = None,
-    match_any: bool = False,
-    skip: int = 0,
-    limit: int = 100,
-    order_by: Optional[str] = None,
-    order_direction: str = "asc"
-) -> List[ModelType]:
 
+    async def filter_by_arrays(
+        self, 
+        db: Session, 
+        *, 
+        array_filters: Dict[str, List[Any]] = None,
+        exact_filters: Dict[str, Any] = None,
+        match_any: bool = False,
+        skip: int = 0,
+        limit: int = 100,
+        order_by: Optional[str] = None,
+        order_direction: str = "asc"
+    ) -> List[ModelType]:
         """
         Filter records by array fields. "
         Args:
@@ -549,19 +576,20 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         
         result = await db.execute(query)
         return result.scalars().all()
+
     async def filter_by_arrays_paginated(
-    self, 
-    db: Session, 
-    *, 
-    array_filters: Dict[str, List[Any]] = None,
-    exact_filters: Dict[str, Any] = None,
-    match_any: bool = False,
-    page: int = 1,
-    page_size: int = 10,
-    order_by: Optional[str] = None,
-    order_direction: str = "asc",
-    include_total: bool = True
-) -> Dict[str, Any]:
+        self, 
+        db: Session, 
+        *, 
+        array_filters: Dict[str, List[Any]] = None,
+        exact_filters: Dict[str, Any] = None,
+        match_any: bool = False,
+        page: int = 1,
+        page_size: int = 10,
+        order_by: Optional[str] = None,
+        order_direction: str = "asc",
+        include_total: bool = True
+    ) -> Dict[str, Any]:
         """
         Filter records by array conditions with pagination.
         

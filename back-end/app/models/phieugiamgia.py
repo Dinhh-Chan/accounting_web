@@ -26,5 +26,10 @@ class PhieuGiamGia(Base):
     tiendt = Column(Numeric(18, 2), nullable=False)
     tientt = Column(Numeric(18, 2), nullable=False)
     
-    # Define relationships if you're using them
+    # Relationships
     chi_tiet = relationship("CTPhieu", back_populates="phieu_giam_gia", cascade="all, delete-orphan")
+    khach_hang = relationship("KhachHang")
+    hoa_don = relationship("HoaDon")
+    tk_no_giam_tru = relationship("TKKT", foreign_keys=[tknogiamtru])
+    tk_co_tt = relationship("TKKT", foreign_keys=[tkcott])
+    tk_no_thue = relationship("TKKT", foreign_keys=[tknothue])

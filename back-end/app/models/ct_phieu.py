@@ -19,5 +19,6 @@ class CTPhieu(Base):
     dvt = Column(String(10), nullable=False)
     dongia = Column(Numeric(18, 2), nullable=False)
     
-    # Define relationships if you're using them
+    # Relationships
     phieu_giam_gia = relationship("PhieuGiamGia", back_populates="chi_tiet")
+    san_pham = relationship("SPDV", back_populates="ct_phieu")
