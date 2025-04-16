@@ -1,178 +1,115 @@
-import React, { useState } from 'react';
-import { 
-  Container, 
-  Box, 
-  Paper, 
-  Typography, 
-  TextField, 
-  Button, 
-  InputAdornment, 
-  IconButton, 
-  Alert, 
-  CircularProgress,
-  Divider
-} from '@mui/material';
-import { 
-  Email as EmailIcon, 
-  Lock as LockIcon, 
-  Visibility as VisibilityIcon, 
-  VisibilityOff as VisibilityOffIcon 
-} from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Box,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  CircularProgress
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { useAuth } from '../../contexts/AuthContext';
+
+const LoginContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  height: '100vh',
+  backgroundColor: theme.palette.background.default
+}));
+
+const LoginPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(4),
+  width: '100%',
+  maxWidth: 400,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.spacing(3),
+  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.05)',
+  borderRadius: theme.shape.borderRadius
+}));
+
+const LoginForm = styled('form')(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.spacing(2),
+}));
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, error: authError } = useAuth();
+  const { login, error: authError, loading, isAuthenticated } = useAuth();
+  const [formData, setFormData] = useState({ email: '', password: '' });
   
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const { email, password } = formData;
     
-    // Validate form
-    if (!email || !password) {
-      setError('Vui lòng nhập đầy đủ email và mật khẩu');
-      return;
+    const success = await login(email, password);
+    if (success) {
+      navigate('/');
     }
-    
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Gọi hàm login từ AuthContext
-      await login({ email, password });
-      
-      // Chuyển hướng sau khi đăng nhập thành công
-      navigate('/dashboard');
-    } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
   };
 
   return (
-    <Box 
-      sx={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        backgroundColor: '#f5f5f5',
-        py: 4
-      }}
-    >
-      <Container maxWidth="sm">
-        <Paper 
-          elevation={3} 
-          sx={{ 
-            p: 4, 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center',
-            borderRadius: 2
-          }}
-        >
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
-              Đăng nhập
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Nhập thông tin đăng nhập để truy cập hệ thống
-            </Typography>
-          </Box>
+    <LoginContainer>
+      <LoginPaper>
+        <Typography variant="h5" component="h1" fontWeight={600} textAlign="center">
+          Đăng nhập
+        </Typography>
+        
+        {authError && (
+          <Alert severity="error">{authError}</Alert>
+        )}
+        
+        <LoginForm onSubmit={handleSubmit}>
+          <TextField
+            label="Email"
+            name="email"
+            type="email"
+            fullWidth
+            value={formData.email}
+            onChange={handleChange}
+            required
+            autoFocus
+          />
           
-          {(error || authError) && (
-            <Alert severity="error" sx={{ width: '100%', mb: 3 }}>
-              {error || authError}
-            </Alert>
-          )}
+          <TextField
+            label="Mật khẩu"
+            name="password"
+            type="password"
+            fullWidth
+            value={formData.password}
+            onChange={handleChange}
+            required
+          />
           
-          <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <EmailIcon color="action" />
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Mật khẩu"
-              type={showPassword ? 'text' : 'password'}
-              id="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <LockIcon color="action" />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={togglePasswordVisibility}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <Box sx={{ textAlign: 'right', mt: 1 }}>
-              <Button variant="text" size="small">
-                Quên mật khẩu?
-              </Button>
-            </Box>
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              size="large"
-              sx={{ mt: 3, mb: 2, py: 1.5 }}
-              disabled={loading}
-            >
-              {loading ? <CircularProgress size={24} /> : 'Đăng nhập'}
-            </Button>
-          </Box>
-          
-          <Divider sx={{ width: '100%', my: 3 }} />
-          
-          <Typography variant="body2" color="text.secondary" align="center">
-            © {new Date().getFullYear()} Quản lý Doanh nghiệp. Bản quyền thuộc về công ty của bạn.
-          </Typography>
-        </Paper>
-      </Container>
-    </Box>
+          <Button 
+            type="submit" 
+            variant="contained" 
+            color="primary" 
+            fullWidth
+            size="large"
+            disabled={loading}
+            sx={{ mt: 2 }}
+          >
+            {loading ? <CircularProgress size={24} color="inherit" /> : 'Đăng nhập'}
+          </Button>
+        </LoginForm>
+      </LoginPaper>
+    </LoginContainer>
   );
 };
 

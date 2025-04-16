@@ -1,8 +1,8 @@
 import React from 'react';
 import HoadonFormPage from '../../components/hoadon/HoadonFormPage';
 
-const HoadonCreatePage = () => {
+const HoadonEditPage = () => {
   return <HoadonFormPage />;
 };
 
-export default HoadonCreatePage;
+export default HoadonEditPage; 

@@ -1,131 +1,78 @@
-import React, { createContext, useState, useEffect } from 'react';
-import { login as loginApi, getCurrentUser } from '../api/auth';
-import { saveToken, getToken, removeToken } from '../utils/tokenUtils';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import axiosInstance from '../utils/axios';
+import { API_ENDPOINTS } from '../config/api';
 
-// Tạo context
-export const AuthContext = createContext(null);
+const AuthContext = createContext();
+
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Kiểm tra và tải thông tin người dùng khi component mount
   useEffect(() => {
-    const loadUser = async () => {
-      const token = getToken();
-      
-      if (token) {
-        try {
-          setLoading(true);
-          // Thực tế sẽ gọi API để lấy thông tin người dùng hiện tại
-          // const userData = await getCurrentUser();
-          
-          // Trong quá trình phát triển, tạo user mẫu
-          const userData = {
-            id: 1,
-            email: 'admin@example.com',
-            full_name: 'Quản trị viên',
-            phone_number: '0901234567',
-            is_active: true,
-            is_superuser: true,
-            last_login: new Date().toISOString()
-          };
-          
-          setCurrentUser(userData);
-          setIsAuthenticated(true);
-        } catch (err) {
-          console.error('Failed to load user:', err);
-          removeToken();
-          setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-          setIsAuthenticated(false);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setLoading(false);
-        setIsAuthenticated(false);
-      }
-    };
-
-    loadUser();
+    // Kiểm tra xem có token không khi tải trang
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetchUser();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
-  // Hàm đăng nhập
-  const login = async (credentials) => {
+  const fetchUser = async () => {
     try {
       setLoading(true);
+      // Gọi API lấy thông tin user từ token
+      const response = await axiosInstance.get(API_ENDPOINTS.ME);
+      setUser(response.data);
       setError(null);
-      
-      // Thực tế sẽ gọi API để đăng nhập
-      // const data = await loginApi(credentials);
-      
-      // Trong quá trình phát triển, tạo phản hồi mẫu
-      const data = {
-        access_token: 'fake_jwt_token_' + Math.random().toString(36).substring(2),
-        token_type: 'bearer',
-        expires_in: 3600,
-        user_id: 1,
-        is_superuser: true
-      };
-      
-      if (data.access_token) {
-        saveToken(data.access_token);
-        
-        // Tạo user mẫu (trong quá trình phát triển)
-        const userData = {
-          id: 1,
-          email: credentials.email || 'admin@example.com',
-          full_name: 'Quản trị viên',
-          phone_number: '0901234567',
-          is_active: true,
-          is_superuser: true,
-          last_login: new Date().toISOString()
-        };
-        
-        setCurrentUser(userData);
-        setIsAuthenticated(true);
-        return userData;
-      }
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.');
-      throw err;
+      console.error('Error fetching user:', err);
+      // Nếu có lỗi (token hết hạn hoặc không hợp lệ), xóa token và đăng xuất
+      logout();
+      setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Hàm đăng xuất
-  const logout = () => {
-    removeToken();
-    setCurrentUser(null);
-    setIsAuthenticated(false);
+  const login = async (email, password) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Gọi API đăng nhập
+      const response = await axiosInstance.post(API_ENDPOINTS.LOGIN, { email, password });
+      
+      // Lưu token vào localStorage
+      localStorage.setItem('token', response.data.access_token);
+      
+      // Sau khi đăng nhập, lấy thông tin user
+      await fetchUser();
+      
+      return true;
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.response?.data?.detail || 'Đăng nhập thất bại. Vui lòng kiểm tra thông tin đăng nhập.');
+      return false;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Các giá trị được cung cấp qua context
-  const value = {
-    currentUser,
-    isAuthenticated,
-    loading,
-    error,
-    login,
-    logout
+  const logout = () => {
+    // Xóa token và user
+    localStorage.removeItem('token');
+    setUser(null);
   };
+
+  const isAuthenticated = !!user;
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, loading, error, login, logout, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-// Hook để sử dụng AuthContext
-export const useAuth = () => {
-  const context = React.useContext(AuthContext);
-  if (context === null) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };

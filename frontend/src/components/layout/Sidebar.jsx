@@ -11,7 +11,8 @@ import {
   Avatar,
   Typography,
   Divider,
-  Collapse
+  Collapse,
+  styled
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -25,23 +26,74 @@ import {
   ExpandMore,
   TrendingUp as TrendingUpIcon,
   Business as BusinessIcon,
-  Edit as EditIcon,
   BarChart as ChartIcon,
   AttachMoney as MoneyIcon
 } from '@mui/icons-material';
 
-const Sidebar = ({ open, width = 260, onClose }) => {
+const StyledDrawer = styled(Drawer)(({ theme }) => ({
+  width: 260,
+  flexShrink: 0,
+  '& .MuiDrawer-paper': {
+    width: 260,
+    boxSizing: 'border-box',
+    border: 'none',
+    boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)',
+    backgroundColor: theme.palette.background.default,
+  },
+}));
+
+const StyledListItemButton = styled(ListItemButton)(({ theme }) => ({
+  borderRadius: '8px',
+  marginBottom: '4px',
+  '&:hover': {
+    backgroundColor: theme.palette.action.hover,
+  },
+  '&.Mui-selected': {
+    backgroundColor: theme.palette.primary.light,
+    color: theme.palette.primary.main,
+    '& .MuiListItemIcon-root': {
+      color: theme.palette.primary.main,
+    },
+  },
+}));
+
+const StyledSubListItemButton = styled(ListItemButton)(({ theme }) => ({
+  borderRadius: '8px',
+  marginBottom: '4px',
+  paddingLeft: theme.spacing(4),
+  '&:hover': {
+    backgroundColor: theme.palette.action.hover,
+  },
+  '&.Mui-selected': {
+    backgroundColor: theme.palette.primary.light,
+    color: theme.palette.primary.main,
+    '& .MuiListItemIcon-root': {
+      color: theme.palette.primary.main,
+    },
+  },
+}));
+
+const Sidebar = ({ open, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [openSales, setOpenSales] = React.useState(false);
-  const [openBackOffice, setOpenBackOffice] = React.useState(false);
+  const [openInventory, setOpenInventory] = React.useState(false);
+  const [openFinance, setOpenFinance] = React.useState(false);
 
-  const handleSalesClick = () => {
-    setOpenSales(!openSales);
-  };
-
-  const handleBackOfficeClick = () => {
-    setOpenBackOffice(!openBackOffice);
+  const handleMenuClick = (title) => {
+    switch (title) {
+      case 'Bán hàng':
+        setOpenSales(!openSales);
+        break;
+      case 'Kho hàng':
+        setOpenInventory(!openInventory);
+        break;
+      case 'Tài chính':
+        setOpenFinance(!openFinance);
+        break;
+      default:
+        break;
+    }
   };
 
   const menuItems = [
@@ -115,31 +167,34 @@ const Sidebar = ({ open, width = 260, onClose }) => {
   };
 
   return (
-    <Drawer
+    <StyledDrawer
       variant="persistent"
       anchor="left"
       open={open}
-      sx={{
-        width: width,
-        flexShrink: 0,
-        '& .MuiDrawer-paper': {
-          width: width,
-          boxSizing: 'border-box',
-          border: 'none',
-          boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)',
-        },
-      }}
     >
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
         <Avatar
           src="/logo.png"
           alt="Logo"
           variant="rounded"
-          sx={{ width: 40, height: 40 }}
+          sx={{ 
+            width: 40, 
+            height: 40,
+            bgcolor: 'primary.main',
+            '& .MuiAvatar-img': {
+              objectFit: 'contain',
+              padding: '4px'
+            }
+          }}
         />
-        <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-          Quản lý doanh nghiệp
-        </Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+            Quản lý doanh nghiệp
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Business Management
+          </Typography>
+        </Box>
       </Box>
 
       <Divider />
@@ -151,45 +206,33 @@ const Sidebar = ({ open, width = 260, onClose }) => {
               {item.subItems ? (
                 <>
                   <ListItem disablePadding>
-                    <ListItemButton
-                      onClick={
-                        item.title === 'Bán hàng'
-                          ? handleSalesClick
-                          : item.title === 'Kho hàng'
-                          ? handleBackOfficeClick
-                          : null
+                    <StyledListItemButton
+                      onClick={() => handleMenuClick(item.title)}
+                      selected={
+                        (item.title === 'Bán hàng' && openSales) ||
+                        (item.title === 'Kho hàng' && openInventory) ||
+                        (item.title === 'Tài chính' && openFinance)
                       }
-                      sx={{
-                        borderRadius: '8px',
-                        mb: 0.5,
-                        color: (
-                          item.title === 'Bán hàng' && openSales) || 
-                          (item.title === 'Kho hàng' && openBackOffice
-                        ) ? 'primary.main' : 'inherit',
-                      }}
                     >
-                      <ListItemIcon sx={{ 
-                        color: (
-                          item.title === 'Bán hàng' && openSales) || 
-                          (item.title === 'Kho hàng' && openBackOffice
-                        ) ? 'primary.main' : 'inherit' 
-                      }}>
+                      <ListItemIcon>
                         {item.icon}
                       </ListItemIcon>
                       <ListItemText primary={item.title} />
-                      {item.title === 'Bán hàng' ? (
-                        openSales ? <ExpandLess /> : <ExpandMore />
-                      ) : item.title === 'Kho hàng' ? (
-                        openBackOffice ? <ExpandLess /> : <ExpandMore />
-                      ) : null}
-                    </ListItemButton>
+                      {(item.title === 'Bán hàng' && openSales) ||
+                       (item.title === 'Kho hàng' && openInventory) ||
+                       (item.title === 'Tài chính' && openFinance) ? (
+                        <ExpandLess />
+                      ) : (
+                        <ExpandMore />
+                      )}
+                    </StyledListItemButton>
                   </ListItem>
                   
                   <Collapse
                     in={
                       (item.title === 'Bán hàng' && openSales) ||
-                      (item.title === 'Kho hàng' && openBackOffice) ||
-                      (item.title === 'Tài chính')
+                      (item.title === 'Kho hàng' && openInventory) ||
+                      (item.title === 'Tài chính' && openFinance)
                     }
                     timeout="auto"
                     unmountOnExit
@@ -197,25 +240,11 @@ const Sidebar = ({ open, width = 260, onClose }) => {
                     <List component="div" disablePadding>
                       {item.subItems.map((subItem, subIndex) => (
                         <ListItem key={subIndex} disablePadding>
-                          <ListItemButton
-                            sx={{
-                              pl: 4,
-                              borderRadius: '8px',
-                              mb: 0.5,
-                              backgroundColor: isRouteActive(subItem.path)
-                                ? 'rgba(25, 118, 210, 0.08)'
-                                : 'transparent',
-                              color: isRouteActive(subItem.path)
-                                ? 'primary.main'
-                                : 'inherit',
-                            }}
+                          <StyledSubListItemButton
+                            selected={isRouteActive(subItem.path)}
                             onClick={() => navigate(subItem.path)}
                           >
-                            <ListItemIcon sx={{
-                              color: isRouteActive(subItem.path)
-                                ? 'primary.main'
-                                : 'inherit',
-                            }}>
+                            <ListItemIcon>
                               {subItem.icon}
                             </ListItemIcon>
                             <ListItemText 
@@ -225,7 +254,7 @@ const Sidebar = ({ open, width = 260, onClose }) => {
                                 fontWeight: isRouteActive(subItem.path) ? 'medium' : 'normal'
                               }}
                             />
-                          </ListItemButton>
+                          </StyledSubListItemButton>
                         </ListItem>
                       ))}
                     </List>
@@ -233,24 +262,11 @@ const Sidebar = ({ open, width = 260, onClose }) => {
                 </>
               ) : (
                 <ListItem disablePadding>
-                  <ListItemButton
-                    sx={{
-                      borderRadius: '8px',
-                      mb: 0.5,
-                      backgroundColor: isRouteActive(item.path)
-                        ? 'rgba(25, 118, 210, 0.08)'
-                        : 'transparent',
-                      color: isRouteActive(item.path)
-                        ? 'primary.main'
-                        : 'inherit',
-                    }}
+                  <StyledListItemButton
+                    selected={isRouteActive(item.path)}
                     onClick={() => navigate(item.path)}
                   >
-                    <ListItemIcon sx={{
-                      color: isRouteActive(item.path)
-                        ? 'primary.main'
-                        : 'inherit',
-                    }}>
+                    <ListItemIcon>
                       {item.icon}
                     </ListItemIcon>
                     <ListItemText 
@@ -259,14 +275,14 @@ const Sidebar = ({ open, width = 260, onClose }) => {
                         fontWeight: isRouteActive(item.path) ? 'medium' : 'normal' 
                       }}
                     />
-                  </ListItemButton>
+                  </StyledListItemButton>
                 </ListItem>
               )}
             </React.Fragment>
           ))}
         </List>
       </Box>
-    </Drawer>
+    </StyledDrawer>
   );
 };
 

@@ -1,34 +1,76 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Grid,
-  Paper,
-  Typography,
-  Box,
-  Card,
-  CardContent,
-  Divider,
-  CircularProgress,
-  Tab,
-  Tabs,
-  ButtonGroup,
-  Button,
-  useTheme
-} from '@mui/material';
-import {
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
-  MonetizationOn as RevenueIcon,
-  ReceiptLong as InvoiceIcon,
-  LocalOffer as DiscountIcon,
-  ShoppingCart as OrderIcon,
-  CalendarToday as CalendarIcon,
-  Today as DayIcon,
-  DateRange as MonthIcon,
-  ViewWeek as ViewWeekIcon,
-  ViewQuilt as YearIcon
-} from '@mui/icons-material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { formatCurrency } from '../../utils/formatUtils';
+import './DashboardPage.css';
+
+// Icons components
+const TrendingUpIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="icon" viewBox="0 0 20 20" fill="currentColor">
+    <path fillRule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clipRule="evenodd" />
+  </svg>
+);
+
+const TrendingDownIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="icon" viewBox="0 0 20 20" fill="currentColor">
+    <path fillRule="evenodd" d="M12 13a1 1 0 100 2h5a1 1 0 001-1v-5a1 1 0 10-2 0v2.586l-4.293-4.293a1 1 0 00-1.414 0L8 9.586l-4.293-4.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0L11 9.414 14.586 13H12z" clipRule="evenodd" />
+  </svg>
+);
+
+const RevenueIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
+const InvoiceIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+  </svg>
+);
+
+const OrderIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+  </svg>
+);
+
+const DiscountIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+  </svg>
+);
+
+const ViewWeekIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="icon" viewBox="0 0 20 20" fill="currentColor">
+    <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+  </svg>
+);
+
+const DayIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+);
+
+const MonthIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+);
+
+const YearIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+  </svg>
+);
+
+// Utils function
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0
+  }).format(value);
+};
 
 // Giả lập dữ liệu
 const generateRevenueData = (period) => {
@@ -72,7 +114,6 @@ const mockStats = {
 };
 
 const DashboardPage = () => {
-  const theme = useTheme();
   const [loading, setLoading] = useState(false);
   const [timeRange, setTimeRange] = useState('month');
   const [chartType, setChartType] = useState('line');
@@ -96,75 +137,45 @@ const DashboardPage = () => {
     setChartType(type);
   };
 
-  const handleTabChange = (event, newValue) => {
+  const handleTabChange = (newValue) => {
     setTabValue(newValue);
   };
 
   // Component thẻ thống kê
-  const StatCard = ({ title, value, icon, growth, color }) => (
-    <Card sx={{ 
-      height: '100%', 
-      transition: 'all 0.3s ease',
-      '&:hover': {
-        transform: 'translateY(-5px)',
-        boxShadow: 3
-      }
-    }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: `${color}.light`,
-              width: 48,
-              height: 48,
-              borderRadius: '50%',
-              color: `${color}.main`
-            }}
-          >
-            {icon}
-          </Box>
-          {growth !== undefined && (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                backgroundColor: growth >= 0 ? 'success.light' : 'error.light',
-                color: growth >= 0 ? 'success.main' : 'error.main',
-                py: 0.5,
-                px: 1,
-                borderRadius: 1
-              }}
-            >
-              {growth >= 0 ? <TrendingUpIcon fontSize="small" sx={{ mr: 0.5 }} /> : <TrendingDownIcon fontSize="small" sx={{ mr: 0.5 }} />}
-              <Typography variant="caption" fontWeight="bold">
-                {Math.abs(growth).toFixed(1)}%
-              </Typography>
-            </Box>
-          )}
-        </Box>
-        <Typography variant="h4" component="div" fontWeight="bold" sx={{ mb: 1 }}>
-          {typeof value === 'number' && value >= 1000 ? value.toLocaleString('vi-VN') : value}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {title}
-        </Typography>
-      </CardContent>
-    </Card>
+  const StatCard = ({ title, value, icon, growth, colorClass }) => (
+    <div className={`stat-card ${colorClass}`}>
+      <div className="stat-card-header">
+        <div className={`stat-card-icon ${colorClass}`}>
+          {icon}
+        </div>
+        {growth !== undefined && (
+          <div className={`growth-indicator ${growth >= 0 ? 'positive' : 'negative'}`}>
+            {growth >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
+            <span className="growth-value">
+              {Math.abs(growth).toFixed(1)}%
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="stat-card-value">
+        {typeof value === 'number' && value >= 1000 ? value.toLocaleString('vi-VN') : value}
+      </div>
+      <div className="stat-card-title">
+        {title}
+      </div>
+    </div>
   );
 
   // Component tooltip cho biểu đồ
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <Paper sx={{ p: 1.5, boxShadow: 2 }}>
-          <Typography variant="subtitle2">{`${label}`}</Typography>
-          <Typography variant="body2" color="primary">
+        <div className="chart-tooltip">
+          <p className="tooltip-label">{`${label}`}</p>
+          <p className="tooltip-value">
             Doanh thu: {formatCurrency(payload[0].value)}
-          </Typography>
-        </Paper>
+          </p>
+        </div>
       );
     }
     return null;
@@ -183,125 +194,125 @@ const DashboardPage = () => {
   };
 
   return (
-    <Box>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" fontWeight="bold" gutterBottom>
+    <div className="dashboard-container">
+      <div className="dashboard-header">
+        <h1 className="dashboard-title">
           Bảng điều khiển
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
+        </h1>
+        <p className="dashboard-subtitle">
           Tổng quan doanh thu và các số liệu kinh doanh
-        </Typography>
-      </Box>
+        </p>
+      </div>
 
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <div className="stats-grid">
+        <div className="stat-item">
           <StatCard
             title="Tổng doanh thu"
             value={formatCurrency(mockStats.totalRevenue)}
             icon={<RevenueIcon />}
             growth={mockStats.revenueGrowth}
-            color="primary"
+            colorClass="primary"
           />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        </div>
+        <div className="stat-item">
           <StatCard
             title="Tổng hóa đơn"
             value={mockStats.totalInvoices}
             icon={<InvoiceIcon />}
             growth={mockStats.invoiceGrowth}
-            color="info"
+            colorClass="info"
           />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        </div>
+        <div className="stat-item">
           <StatCard
             title="Đơn hàng"
             value={mockStats.totalOrders}
             icon={<OrderIcon />}
             growth={mockStats.orderGrowth}
-            color="success"
+            colorClass="success"
           />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        </div>
+        <div className="stat-item">
           <StatCard
             title="Phiếu giảm giá"
             value={mockStats.totalDiscounts}
             icon={<DiscountIcon />}
             growth={mockStats.discountGrowth}
-            color="warning"
+            colorClass="warning"
           />
-        </Grid>
-      </Grid>
+        </div>
+      </div>
 
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
+      <div className="chart-panel">
+        <div className="chart-header">
+          <div className="chart-title-container">
+            <h2 className="chart-title">
               Doanh thu
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
+            </h2>
+            <p className="chart-subtitle">
               {`Biểu đồ thống kê doanh thu theo ${
                 timeRange === 'day' ? 'ngày' : timeRange === 'week' ? 'tuần' : 
                 timeRange === 'month' ? 'tháng' : 'năm'
               }`}
-            </Typography>
-          </Box>
+            </p>
+          </div>
           
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <ButtonGroup size="small" variant="outlined">
-              <Button 
+          <div className="chart-controls">
+            <div className="chart-type-buttons">
+              <button 
                 onClick={() => handleChartTypeChange('line')} 
-                variant={chartType === 'line' ? 'contained' : 'outlined'}
+                className={`chart-type-btn ${chartType === 'line' ? 'active' : ''}`}
               >
-                <TrendingUpIcon fontSize="small" />
-              </Button>
-              <Button 
+                <TrendingUpIcon />
+              </button>
+              <button 
                 onClick={() => handleChartTypeChange('bar')} 
-                variant={chartType === 'bar' ? 'contained' : 'outlined'}
+                className={`chart-type-btn ${chartType === 'bar' ? 'active' : ''}`}
               >
-                <ViewWeekIcon fontSize="small" />
-              </Button>
-            </ButtonGroup>
+                <ViewWeekIcon />
+              </button>
+            </div>
             
-            <ButtonGroup size="small" variant="outlined">
-              <Button 
+            <div className="time-range-buttons">
+              <button 
                 onClick={() => handleRangeChange('day')} 
-                variant={timeRange === 'day' ? 'contained' : 'outlined'}
+                className={`time-range-btn ${timeRange === 'day' ? 'active' : ''}`}
               >
-                <DayIcon fontSize="small" sx={{ mr: 0.5 }} />
-                Ngày
-              </Button>
-              <Button 
+                <DayIcon />
+                <span>Ngày</span>
+              </button>
+              <button 
                 onClick={() => handleRangeChange('week')} 
-                variant={timeRange === 'week' ? 'contained' : 'outlined'}
+                className={`time-range-btn ${timeRange === 'week' ? 'active' : ''}`}
               >
-                <ViewWeekIcon fontSize="small" sx={{ mr: 0.5 }} />
-                Tuần
-              </Button>
-              <Button 
+                <ViewWeekIcon />
+                <span>Tuần</span>
+              </button>
+              <button 
                 onClick={() => handleRangeChange('month')} 
-                variant={timeRange === 'month' ? 'contained' : 'outlined'}
+                className={`time-range-btn ${timeRange === 'month' ? 'active' : ''}`}
               >
-                <MonthIcon fontSize="small" sx={{ mr: 0.5 }} />
-                Tháng
-              </Button>
-              <Button 
+                <MonthIcon />
+                <span>Tháng</span>
+              </button>
+              <button 
                 onClick={() => handleRangeChange('year')} 
-                variant={timeRange === 'year' ? 'contained' : 'outlined'}
+                className={`time-range-btn ${timeRange === 'year' ? 'active' : ''}`}
               >
-                <YearIcon fontSize="small" sx={{ mr: 0.5 }} />
-                Năm
-              </Button>
-            </ButtonGroup>
-          </Box>
-        </Box>
+                <YearIcon />
+                <span>Năm</span>
+              </button>
+            </div>
+          </div>
+        </div>
         
-        <Divider sx={{ my: 2 }} />
+        <div className="chart-divider"></div>
         
-        <Box sx={{ height: 400, width: '100%' }}>
+        <div className="chart-container">
           {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-              <CircularProgress />
-            </Box>
+            <div className="loading-container">
+              <div className="loading-spinner"></div>
+            </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               {chartType === 'line' ? (
@@ -322,7 +333,7 @@ const DashboardPage = () => {
                   <Line
                     type="monotone"
                     dataKey="revenue"
-                    stroke={theme.palette.primary.main}
+                    stroke="#3b82f6"
                     activeDot={{ r: 8 }}
                     name="Doanh thu"
                     strokeWidth={2}
@@ -345,7 +356,7 @@ const DashboardPage = () => {
                   <Legend />
                   <Bar
                     dataKey="revenue"
-                    fill={theme.palette.primary.main}
+                    fill="#3b82f6"
                     name="Doanh thu"
                     barSize={timeRange === 'year' ? 30 : 15}
                   />
@@ -353,59 +364,123 @@ const DashboardPage = () => {
               )}
             </ResponsiveContainer>
           )}
-        </Box>
-      </Paper>
+        </div>
+      </div>
 
-      <Paper sx={{ p: 3 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-          <Tabs 
-            value={tabValue} 
-            onChange={handleTabChange} 
-            aria-label="dashboard tabs"
+      <div className="tabs-panel">
+        <div className="tabs-header">
+          <button
+            className={`tab-btn ${tabValue === 0 ? 'active' : ''}`}
+            onClick={() => handleTabChange(0)}
           >
-            <Tab label="Top 5 sản phẩm" />
-            <Tab label="Top 5 khách hàng" />
-            <Tab label="Tình hình bán hàng" />
-          </Tabs>
-        </Box>
+            Top 5 sản phẩm
+          </button>
+          <button
+            className={`tab-btn ${tabValue === 1 ? 'active' : ''}`}
+            onClick={() => handleTabChange(1)}
+          >
+            Top 5 khách hàng
+          </button>
+          <button
+            className={`tab-btn ${tabValue === 2 ? 'active' : ''}`}
+            onClick={() => handleTabChange(2)}
+          >
+            Tình hình bán hàng
+          </button>
+        </div>
 
-        <Box sx={{ p: 1 }}>
+        <div className="tab-content">
           {tabValue === 0 && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
+            <div>
+              <h3 className="tab-title">
                 Sản phẩm bán chạy nhất
-              </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
+              </h3>
+              <p className="tab-subtitle">
                 Top 5 sản phẩm có doanh thu cao nhất
-              </Typography>
-              {/* Nội dung danh sách sản phẩm */}
-            </Box>
+              </p>
+              <div className="product-list">
+                <div className="product-item">
+                  <div className="product-info">
+                    <h4 className="product-name">iPhone 15 Pro Max</h4>
+                    <p className="product-category">Điện thoại</p>
+                  </div>
+                  <div className="product-stats">
+                    <p className="product-revenue">{formatCurrency(285000000)}</p>
+                    <p className="product-orders">57 đơn hàng</p>
+                  </div>
+                </div>
+                <div className="product-item">
+                  <div className="product-info">
+                    <h4 className="product-name">MacBook Pro M3</h4>
+                    <p className="product-category">Laptop</p>
+                  </div>
+                  <div className="product-stats">
+                    <p className="product-revenue">{formatCurrency(212000000)}</p>
+                    <p className="product-orders">42 đơn hàng</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
           {tabValue === 1 && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
+            <div>
+              <h3 className="tab-title">
                 Khách hàng hàng đầu
-              </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
+              </h3>
+              <p className="tab-subtitle">
                 Top 5 khách hàng có giá trị đơn hàng cao nhất
-              </Typography>
-              {/* Nội dung danh sách khách hàng */}
-            </Box>
+              </p>
+              <div className="customer-list">
+                <div className="customer-item">
+                  <div className="customer-info">
+                    <h4 className="customer-name">Công ty TNHH ABC</h4>
+                    <p className="customer-email">abc@company.com</p>
+                  </div>
+                  <div className="customer-stats">
+                    <p className="customer-revenue">{formatCurrency(125000000)}</p>
+                    <p className="customer-orders">12 đơn hàng</p>
+                  </div>
+                </div>
+                <div className="customer-item">
+                  <div className="customer-info">
+                    <h4 className="customer-name">Công ty CP XYZ</h4>
+                    <p className="customer-email">xyz@corp.vn</p>
+                  </div>
+                  <div className="customer-stats">
+                    <p className="customer-revenue">{formatCurrency(98000000)}</p>
+                    <p className="customer-orders">8 đơn hàng</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
           {tabValue === 2 && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
+            <div>
+              <h3 className="tab-title">
                 Tình hình bán hàng
-              </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
+              </h3>
+              <p className="tab-subtitle">
                 Tỷ lệ chuyển đổi và hiệu suất bán hàng
-              </Typography>
-              {/* Nội dung tình hình bán hàng */}
-            </Box>
+              </p>
+              <div className="sales-metrics">
+                <div className="metric-item">
+                  <p className="metric-label">Tỷ lệ chuyển đổi</p>
+                  <p className="metric-value">23.5%</p>
+                </div>
+                <div className="metric-item">
+                  <p className="metric-label">Giá trị đơn trung bình</p>
+                  <p className="metric-value">{formatCurrency(4500000)}</p>
+                </div>
+                <div className="metric-item">
+                  <p className="metric-label">Tỷ lệ hoàn thành</p>
+                  <p className="metric-value success">92.7%</p>
+                </div>
+              </div>
+            </div>
           )}
-        </Box>
-      </Paper>
-    </Box>
+        </div>
+      </div>
+    </div>
   );
 };
 

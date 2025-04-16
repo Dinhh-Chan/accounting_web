@@ -13,7 +13,8 @@ import {
   InputBase,
   Divider,
   useTheme,
-  alpha
+  alpha,
+  styled
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -28,10 +29,94 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
+const StyledAppBar = styled(AppBar)(({ theme }) => ({
+  zIndex: theme.zIndex.drawer + 1,
+  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24)',
+  background: 'white',
+  color: theme.palette.text.primary,
+  borderBottom: `1px solid ${theme.palette.divider}`,
+}));
+
+const StyledToolbar = styled(Toolbar)(({ theme }) => ({
+  minHeight: 64,
+  padding: theme.spacing(0, 2),
+}));
+
+const SearchBox = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  marginLeft: theme.spacing(3),
+  borderRadius: theme.shape.borderRadius,
+  backgroundColor: alpha(theme.palette.common.black, 0.05),
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.common.black, 0.1),
+  },
+  width: '30%',
+  [theme.breakpoints.down('sm')]: {
+    width: '100%',
+    marginLeft: 0,
+  },
+}));
+
+const SearchIconWrapper = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  padding: theme.spacing(1),
+  height: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: theme.palette.text.secondary,
+}));
+
+const StyledInputBase = styled(InputBase)(({ theme }) => ({
+  paddingLeft: `calc(1em + ${theme.spacing(4)})`,
+  paddingRight: theme.spacing(1),
+  paddingTop: theme.spacing(1),
+  paddingBottom: theme.spacing(1),
+  width: '100%',
+  fontSize: '0.9rem',
+  '&::placeholder': {
+    color: theme.palette.text.secondary,
+  },
+}));
+
+const UserBox = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  cursor: 'pointer',
+  marginLeft: theme.spacing(2),
+  padding: theme.spacing(1),
+  borderRadius: theme.shape.borderRadius,
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.common.black, 0.05),
+  },
+}));
+
+const StyledMenu = styled(Menu)(({ theme }) => ({
+  '& .MuiPaper-root': {
+    minWidth: 200,
+    borderRadius: theme.shape.borderRadius,
+    marginTop: theme.spacing(1),
+    boxShadow: theme.shadows[3],
+  },
+}));
+
+const StyledMenuItem = styled(MenuItem)(({ theme }) => ({
+  padding: theme.spacing(1.5, 2),
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.08),
+  },
+}));
+
 const Header = ({ open, handleDrawerToggle }) => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { currentUser, logout } = useAuth ? useAuth() : { currentUser: null, logout: () => {} };
+  
+  // Luôn gọi useAuth() không có điều kiện
+  const authData = useAuth();
+  
+  // Sau khi gọi hook, kiểm tra dữ liệu trả về
+  const currentUser = authData?.currentUser ?? null;
+  const logout = authData?.logout ?? (() => {});
   
   const [anchorEl, setAnchorEl] = useState(null);
   const [mobileMoreAnchorEl, setMobileMoreAnchorEl] = useState(null);
@@ -91,7 +176,7 @@ const Header = ({ open, handleDrawerToggle }) => {
 
   const menuId = 'primary-search-account-menu';
   const renderMenu = (
-    <Menu
+    <StyledMenu
       anchorEl={anchorEl}
       anchorOrigin={{
         vertical: 'bottom',
@@ -105,14 +190,6 @@ const Header = ({ open, handleDrawerToggle }) => {
       }}
       open={isMenuOpen}
       onClose={handleMenuClose}
-      PaperProps={{
-        elevation: 3,
-        sx: {
-          minWidth: 200,
-          borderRadius: 2,
-          mt: 1,
-        },
-      }}
     >
       <Box sx={{ px: 2, py: 1.5, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Avatar 
@@ -120,7 +197,9 @@ const Header = ({ open, handleDrawerToggle }) => {
             width: 56, 
             height: 56, 
             mb: 1, 
-            bgcolor: theme.palette.primary.main 
+            bgcolor: theme.palette.primary.main,
+            fontSize: '1.5rem',
+            fontWeight: 'bold'
           }}
         >
           {currentUser?.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'U'}
@@ -135,28 +214,28 @@ const Header = ({ open, handleDrawerToggle }) => {
       
       <Divider />
       
-      <MenuItem onClick={handleProfile} sx={{ py: 1.5 }}>
+      <StyledMenuItem onClick={handleProfile}>
         <PersonIcon sx={{ mr: 2, fontSize: 20 }} />
         Thông tin cá nhân
-      </MenuItem>
+      </StyledMenuItem>
       
-      <MenuItem onClick={handleSettings} sx={{ py: 1.5 }}>
+      <StyledMenuItem onClick={handleSettings}>
         <SettingsIcon sx={{ mr: 2, fontSize: 20 }} />
         Cài đặt
-      </MenuItem>
+      </StyledMenuItem>
       
       <Divider />
       
-      <MenuItem onClick={handleLogout} sx={{ py: 1.5, color: theme.palette.error.main }}>
+      <StyledMenuItem onClick={handleLogout} sx={{ color: theme.palette.error.main }}>
         <LogoutIcon sx={{ mr: 2, fontSize: 20 }} />
         Đăng xuất
-      </MenuItem>
-    </Menu>
+      </StyledMenuItem>
+    </StyledMenu>
   );
 
   const notificationsMenuId = 'notifications-menu';
   const renderNotificationsMenu = (
-    <Menu
+    <StyledMenu
       anchorEl={notificationsAnchorEl}
       anchorOrigin={{
         vertical: 'bottom',
@@ -171,12 +250,9 @@ const Header = ({ open, handleDrawerToggle }) => {
       open={isNotificationsMenuOpen}
       onClose={handleNotificationsMenuClose}
       PaperProps={{
-        elevation: 3,
         sx: {
           minWidth: 300,
           maxWidth: 360,
-          borderRadius: 2,
-          mt: 1,
         },
       }}
     >
@@ -190,7 +266,7 @@ const Header = ({ open, handleDrawerToggle }) => {
       
       {notifications.length > 0 ? (
         notifications.map((notification) => (
-          <MenuItem key={notification.id} onClick={handleNotificationsMenuClose} sx={{ py: 1.5 }}>
+          <StyledMenuItem key={notification.id} onClick={handleNotificationsMenuClose}>
             <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
               <Typography variant="body2">
                 {notification.text}
@@ -199,7 +275,7 @@ const Header = ({ open, handleDrawerToggle }) => {
                 {notification.time}
               </Typography>
             </Box>
-          </MenuItem>
+          </StyledMenuItem>
         ))
       ) : (
         <Box sx={{ py: 2, display: 'flex', justifyContent: 'center' }}>
@@ -211,17 +287,17 @@ const Header = ({ open, handleDrawerToggle }) => {
       
       <Divider />
       
-      <MenuItem onClick={handleNotificationsMenuClose} sx={{ justifyContent: 'center' }}>
+      <StyledMenuItem onClick={handleNotificationsMenuClose} sx={{ justifyContent: 'center' }}>
         <Typography variant="body2" color="primary">
           Xem tất cả thông báo
         </Typography>
-      </MenuItem>
-    </Menu>
+      </StyledMenuItem>
+    </StyledMenu>
   );
 
   const mobileMenuId = 'primary-search-account-menu-mobile';
   const renderMobileMenu = (
-    <Menu
+    <StyledMenu
       anchorEl={mobileMoreAnchorEl}
       anchorOrigin={{
         vertical: 'top',
@@ -236,15 +312,15 @@ const Header = ({ open, handleDrawerToggle }) => {
       open={isMobileMenuOpen}
       onClose={handleMobileMenuClose}
     >
-      <MenuItem onClick={handleNotificationsMenuOpen}>
+      <StyledMenuItem onClick={handleNotificationsMenuOpen}>
         <IconButton size="large" color="inherit">
           <Badge badgeContent={3} color="error">
             <NotificationsIcon />
           </Badge>
         </IconButton>
-        <p>Thông báo</p>
-      </MenuItem>
-      <MenuItem onClick={handleProfileMenuOpen}>
+        <Typography variant="body2" sx={{ ml: 1 }}>Thông báo</Typography>
+      </StyledMenuItem>
+      <StyledMenuItem onClick={handleProfileMenuOpen}>
         <IconButton
           size="large"
           aria-label="account of current user"
@@ -254,22 +330,14 @@ const Header = ({ open, handleDrawerToggle }) => {
         >
           <AccountCircle />
         </IconButton>
-        <p>Tài khoản</p>
-      </MenuItem>
-    </Menu>
+        <Typography variant="body2" sx={{ ml: 1 }}>Tài khoản</Typography>
+      </StyledMenuItem>
+    </StyledMenu>
   );
 
   return (
-    <AppBar 
-      position="fixed" 
-      sx={{ 
-        zIndex: theme.zIndex.drawer + 1,
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24)',
-        background: 'white',
-        color: 'text.primary'
-      }}
-    >
-      <Toolbar>
+    <StyledAppBar position="fixed">
+      <StyledToolbar>
         <IconButton
           color="inherit"
           aria-label="open drawer"
@@ -289,30 +357,14 @@ const Header = ({ open, handleDrawerToggle }) => {
           Quản lý doanh nghiệp
         </Typography>
         
-        <Box sx={{ 
-          position: 'relative',
-          ml: 3,
-          borderRadius: 1,
-          backgroundColor: alpha(theme.palette.common.black, 0.05),
-          '&:hover': {
-            backgroundColor: alpha(theme.palette.common.black, 0.1),
-          },
-          width: '30%'
-        }}>
-          <Box sx={{ position: 'absolute', p: 1, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <SearchBox>
+          <SearchIconWrapper>
             <SearchIcon />
-          </Box>
-          <InputBase
+          </SearchIconWrapper>
+          <StyledInputBase
             placeholder="Tìm kiếm..."
-            sx={{
-              pl: 5,
-              pr: 1,
-              py: 1,
-              width: '100%',
-              fontSize: '0.9rem'
-            }}
           />
-        </Box>
+        </SearchBox>
         
         <Box sx={{ flexGrow: 1 }} />
         
@@ -329,20 +381,7 @@ const Header = ({ open, handleDrawerToggle }) => {
             </IconButton>
           </Tooltip>
           
-          <Box 
-            sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              cursor: 'pointer',
-              ml: 2, 
-              p: 1,
-              borderRadius: 2,
-              '&:hover': {
-                backgroundColor: alpha(theme.palette.common.black, 0.05),
-              },
-            }}
-            onClick={handleProfileMenuOpen}
-          >
+          <UserBox onClick={handleProfileMenuOpen}>
             <Avatar 
               sx={{ 
                 width: 36, 
@@ -362,7 +401,7 @@ const Header = ({ open, handleDrawerToggle }) => {
                 {currentUser?.is_superuser ? 'Quản trị viên' : 'Nhân viên'}
               </Typography>
             </Box>
-          </Box>
+          </UserBox>
         </Box>
         
         <Box sx={{ display: { xs: 'flex', md: 'none' } }}>
@@ -377,11 +416,11 @@ const Header = ({ open, handleDrawerToggle }) => {
             <MoreIcon />
           </IconButton>
         </Box>
-      </Toolbar>
+      </StyledToolbar>
       {renderMobileMenu}
       {renderMenu}
       {renderNotificationsMenu}
-    </AppBar>
+    </StyledAppBar>
   );
 };
 

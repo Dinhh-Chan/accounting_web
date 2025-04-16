@@ -3,6 +3,10 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import axiosInstance from './utils/axios';
+
+// Gán axiosInstance vào biến toàn cục để có thể import trong bất kỳ file nào
+window.axios = axiosInstance;
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

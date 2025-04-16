@@ -1,8 +1,38 @@
 import React, { useState } from 'react';
-import { Box, Toolbar, useMediaQuery, useTheme, CssBaseline } from '@mui/material';
+import { Box, Toolbar, useMediaQuery, useTheme, CssBaseline, styled } from '@mui/material';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
+
+const MainLayout = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  height: '100vh',
+  backgroundColor: theme.palette.background.default,
+}));
+
+const MainContent = styled(Box)(({ theme }) => ({
+  flexGrow: 1,
+  padding: 0,
+  width: { md: `calc(100% - ${theme.spacing(26)})` },
+  marginLeft: { md: theme.spacing(26) },
+  transition: theme.transitions.create(['margin', 'width'], {
+    easing: theme.transitions.easing.sharp,
+    duration: theme.transitions.duration.leavingScreen,
+  }),
+  [theme.breakpoints.down('md')]: {
+    width: '100%',
+    marginLeft: 0,
+  },
+}));
+
+const ContentWrapper = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(3),
+  minHeight: 'calc(100vh - 64px)',
+  backgroundColor: theme.palette.background.default,
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(2),
+  },
+}));
 
 const Layout = () => {
   const theme = useTheme();
@@ -14,10 +44,8 @@ const Layout = () => {
     setDrawerOpen(!drawerOpen);
   };
 
-  const drawerWidth = 260;
-
   return (
-    <Box sx={{ display: 'flex', height: '100vh' }}>
+    <MainLayout>
       <CssBaseline />
       
       <Header 
@@ -27,29 +55,16 @@ const Layout = () => {
       
       <Sidebar 
         open={drawerOpen} 
-        width={drawerWidth} 
         onClose={() => setDrawerOpen(false)} 
       />
       
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 0,
-          width: { md: `calc(100% - ${drawerOpen ? drawerWidth : 0}px)` },
-          ml: { md: `${drawerOpen ? drawerWidth : 0}px` },
-          transition: theme.transitions.create(['margin', 'width'], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.leavingScreen,
-          }),
-        }}
-      >
+      <MainContent>
         <Toolbar /> {/* Spacing for fixed app bar */}
-        <Box sx={{ p: 3 }}>
+        <ContentWrapper>
           <Outlet />
-        </Box>
-      </Box>
-    </Box>
+        </ContentWrapper>
+      </MainContent>
+    </MainLayout>
   );
 };
 

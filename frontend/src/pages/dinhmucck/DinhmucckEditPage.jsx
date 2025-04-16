@@ -9,32 +9,32 @@ import {
   Grid,
   InputAdornment,
   FormHelperText,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Select,
   Alert,
   CircularProgress,
   Snackbar,
   IconButton,
   Chip,
   Slider,
-  Stack
+  Stack,
+  Divider,
+  Skeleton
 } from '@mui/material';
 import {
   Save as SaveIcon,
   ArrowBack as ArrowBackIcon,
   CalendarMonth as CalendarIcon,
-  Percent as PercentIcon
+  Percent as PercentIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 import { vi } from 'date-fns/locale';
 import axiosInstance from '../../utils/axios';
 import { API_ENDPOINTS } from '../../config/api';
+import { format, parseISO } from 'date-fns';
 
 const StyledCard = styled(Card)(({ theme }) => ({
   margin: theme.spacing(2, 0),
@@ -86,65 +86,129 @@ const ProductInfo = styled(Box)(({ theme }) => ({
 }));
 
 const formatCurrency = (amount) => {
-  if (!amount) return '';
+  if (!amount && amount !== 0) return '';
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 };
 
-const DinhmucckCreatePage = () => {
+const DinhmucckEditPage = () => {
   const navigate = useNavigate();
+  const { maspdv, date } = useParams(); // Lấy tham số từ URL trực tiếp
   const [formState, setFormState] = useState({
     maspdv: '',
     ngayhl: new Date(),
     muctien: '',
     tyleck: 0
   });
+  const [originalData, setOriginalData] = useState(null);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [alert, setAlert] = useState({ show: false, message: '', severity: 'info' });
-  const [products, setProducts] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [product, setProduct] = useState(null);
 
-  // Tải danh sách sản phẩm
-  const fetchProducts = useCallback(async () => {
-    setLoadingProducts(true);
+  // Tải thông tin sản phẩm
+  const fetchProductData = async (productId) => {
     try {
-      const response = await axiosInstance.get(API_ENDPOINTS.PRODUCTS);
-      console.log('API Response:', response.data);
-      
-      if (Array.isArray(response.data)) {
-        setProducts(response.data);
-      } else if (response.data && Array.isArray(response.data.items)) {
-        setProducts(response.data.items);
-      } else {
-        console.error('Dữ liệu sản phẩm không đúng định dạng:', response.data);
-        setProducts([]);
-      }
+      const response = await axiosInstance.get(`${API_ENDPOINTS.PRODUCTS}/${productId}`);
+      setProduct(response.data);
     } catch (error) {
-      console.error('Lỗi khi tải danh sách sản phẩm:', error);
+      console.error('Lỗi khi tải thông tin sản phẩm:', error);
       setAlert({
         show: true,
-        message: 'Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.',
+        message: 'Không thể tải thông tin sản phẩm.',
+        severity: 'warning'
+      });
+    }
+  };
+
+  // Tải thông tin định mức chiết khấu theo id
+  const fetchDiscountData = useCallback(async () => {
+    setInitialLoading(true);
+    try {
+      if (!maspdv || !date) {
+        throw new Error('Thiếu tham số sản phẩm hoặc ngày');
+      }
+      
+      console.log("Thông số đầu vào:", { maspdv, date });
+      
+      // Phân tích chuỗi ngày từ URL (yyyy-MM-dd) thành các phần
+      const dateParts = date.split('-');
+      if (dateParts.length !== 3) {
+        throw new Error('Định dạng ngày không hợp lệ, cần định dạng yyyy-MM-dd');
+      }
+      
+      // Tạo đối tượng ngày từ các phần tách ra
+      // Chú ý: tháng trong JavaScript bắt đầu từ 0 nên phải trừ 1
+      const year = parseInt(dateParts[0], 10);
+      const month = parseInt(dateParts[1], 10) - 1;
+      const day = parseInt(dateParts[2], 10);
+      
+      if (isNaN(year) || isNaN(month) || isNaN(day)) {
+        throw new Error('Các thành phần ngày không hợp lệ');
+      }
+      
+      // Tạo đối tượng Date
+      const dateObj = new Date(year, month, day);
+      
+      // Kiểm tra tính hợp lệ của ngày
+      if (isNaN(dateObj.getTime())) {
+        throw new Error('Ngày không hợp lệ sau khi chuyển đổi');
+      }
+      
+      // Format ngày theo định dạng YYYY-MM-DD
+      const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      
+      // Sử dụng helper function để tạo URL API
+      const apiUrl = API_ENDPOINTS.DISCOUNT_RATE_DETAIL(maspdv, formattedDate);
+      console.log("API URL:", apiUrl);
+      
+      // Gọi API endpoint trực tiếp
+      const response = await axiosInstance.get(apiUrl);
+      const discountData = response.data;
+      
+      console.log("Dữ liệu nhận được từ API:", discountData);
+      
+      // Cập nhật state với dữ liệu từ API
+      setFormState({
+        maspdv: discountData.maspdv,
+        ngayhl: discountData.ngayhl ? parseISO(discountData.ngayhl) : new Date(year, month, day),
+        muctien: discountData.muctien?.toString() || '0',
+        tyleck: parseFloat(discountData.tyleck || discountData.tiledk) || 0
+      });
+      
+      setOriginalData(discountData);
+      
+      // Tải thông tin sản phẩm
+      await fetchProductData(discountData.maspdv);
+    } catch (error) {
+      console.error('Lỗi khi tải thông tin định mức chiết khấu:', error);
+      console.error('Chi tiết lỗi:', error.message || 'Không có thông tin chi tiết');
+      
+      if (error.response) {
+        console.error('Mã lỗi:', error.response.status);
+        console.error('Dữ liệu phản hồi:', error.response.data);
+      }
+      
+      setAlert({
+        show: true,
+        message: `Không thể tải thông tin định mức chiết khấu: ${error.response?.data?.detail || error.message || 'Vui lòng thử lại sau hoặc quay lại danh sách.'}`,
         severity: 'error'
       });
-      setProducts([]);
     } finally {
-      setLoadingProducts(false);
+      setInitialLoading(false);
     }
-  }, []);
+  }, [maspdv, date]);
 
   useEffect(() => {
-    // Tải danh sách sản phẩm khi component mount
-    fetchProducts();
-  }, [fetchProducts]);
+    // Tải thông tin định mức khi component mount
+    if (maspdv && date) {
+      fetchDiscountData();
+    }
+  }, [maspdv, date, fetchDiscountData]);
 
   // Xác thực form
   const validateForm = () => {
     const newErrors = {};
-    
-    if (!formState.maspdv) {
-      newErrors.maspdv = 'Vui lòng chọn sản phẩm';
-    }
     
     if (!formState.ngayhl) {
       newErrors.ngayhl = 'Vui lòng chọn ngày hiệu lực';
@@ -172,12 +236,6 @@ const DinhmucckCreatePage = () => {
     // Xóa lỗi khi người dùng nhập lại
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
-    }
-
-    // Nếu thay đổi sản phẩm, cập nhật selectedProduct
-    if (name === 'maspdv') {
-      const product = products.find(p => p.maspdv === value);
-      setSelectedProduct(product);
     }
   };
 
@@ -211,27 +269,61 @@ const DinhmucckCreatePage = () => {
     
     setLoading(true);
     try {
+      if (!originalData || !originalData.maspdv) {
+        throw new Error('Không có dữ liệu gốc để cập nhật');
+      }
+      
+      // Lấy các thành phần ngày để định dạng chuẩn
+      const year = formState.ngayhl.getFullYear();
+      const month = String(formState.ngayhl.getMonth() + 1).padStart(2, '0');
+      const day = String(formState.ngayhl.getDate()).padStart(2, '0');
+      
       // Định dạng dữ liệu để gửi
       const formData = {
-        maspdv: formState.maspdv,
-        ngayhl: new Date(formState.ngayhl.getFullYear(), 
-                        formState.ngayhl.getMonth(), 
-                        formState.ngayhl.getDate(),
-                        0, 0, 0).toISOString().replace('Z', ''),
+        maspdv: originalData.maspdv,
+        ngayhl: `${year}-${month}-${day}`, // Format: YYYY-MM-DD
         muctien: parseFloat(formState.muctien),
         tyleck: parseFloat(formState.tyleck)
       };
       
-      console.log("Gửi dữ liệu:", formData);
+      console.log("Gửi dữ liệu cập nhật:", formData);
       
-      // Gửi request tạo mới
-      const response = await axiosInstance.post(API_ENDPOINTS.DISCOUNT_RATES, formData);
+      // Tạo URL cho API update sử dụng ngày gốc và mã sản phẩm gốc
+      let originalDateStr;
+      
+      if (typeof originalData.ngayhl === 'string') {
+        if (originalData.ngayhl.includes('T')) {
+          // Nếu là định dạng ISO, trích xuất phần ngày
+          originalDateStr = originalData.ngayhl.split('T')[0];
+        } else {
+          // Nếu là chuỗi ngày khác, chuyển đổi qua Date rồi định dạng lại
+          const origDate = new Date(originalData.ngayhl);
+          if (!isNaN(origDate.getTime())) {
+            originalDateStr = `${origDate.getFullYear()}-${String(origDate.getMonth() + 1).padStart(2, '0')}-${String(origDate.getDate()).padStart(2, '0')}`;
+          } else {
+            // Nếu không thể chuyển đổi, sử dụng chuỗi nguyên gốc
+            originalDateStr = originalData.ngayhl;
+          }
+        }
+      } else {
+        // Nếu là đối tượng Date
+        const origDate = new Date(originalData.ngayhl);
+        originalDateStr = `${origDate.getFullYear()}-${String(origDate.getMonth() + 1).padStart(2, '0')}-${String(origDate.getDate()).padStart(2, '0')}`;
+      }
+      
+      // Sử dụng helper function để tạo URL API cập nhật
+      const updateUrl = API_ENDPOINTS.DISCOUNT_RATE_DETAIL(originalData.maspdv, originalDateStr);
+      
+      console.log("API URL cập nhật:", updateUrl);
+      
+      // Gửi request cập nhật
+      const response = await axiosInstance.put(updateUrl, formData);
       console.log("Phản hồi API:", response.data);
       
       // Hiển thị thông báo thành công
       setAlert({
         show: true,
-        message: 'Thêm định mức chiết khấu thành công!',
+        message: 'Cập nhật định mức chiết khấu thành công!',
         severity: 'success'
       });
       
@@ -240,10 +332,10 @@ const DinhmucckCreatePage = () => {
         navigate('/dinhmucck');
       }, 1000);
     } catch (error) {
-      console.error('Lỗi khi tạo định mức chiết khấu:', error);
+      console.error('Lỗi khi cập nhật định mức chiết khấu:', error);
       
       // Hiển thị thông báo lỗi chi tiết hơn
-      let errorMsg = 'Lỗi khi tạo định mức chiết khấu. Vui lòng thử lại.';
+      let errorMsg = 'Lỗi khi cập nhật định mức chiết khấu. Vui lòng thử lại.';
       
       if (error.response) {
         // Lỗi có phản hồi từ server
@@ -300,6 +392,50 @@ const DinhmucckCreatePage = () => {
     return `${value}%`;
   };
 
+  // Hiển thị skeleton khi đang tải
+  if (initialLoading) {
+    return (
+      <Box sx={{ p: 3, maxWidth: 800, mx: 'auto' }}>
+        <Skeleton variant="rectangular" width="40%" height={40} sx={{ mb: 2 }} />
+        <Skeleton variant="rectangular" width="100%" height={300} sx={{ borderRadius: 2 }} />
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3, gap: 2 }}>
+          <Skeleton variant="rectangular" width={100} height={40} />
+          <Skeleton variant="rectangular" width={120} height={40} />
+        </Box>
+      </Box>
+    );
+  }
+  
+  // Hiển thị thông báo lỗi nếu không tải được dữ liệu và không có originalData
+  if (alert.show && alert.severity === 'error' && !originalData) {
+    return (
+      <Box sx={{ p: 3, maxWidth: 800, mx: 'auto' }}>
+        <Alert 
+          severity="error" 
+          variant="filled" 
+          sx={{ mb: 3 }}
+        >
+          {alert.message}
+        </Alert>
+        
+        <Box sx={{ textAlign: 'center', mt: 4 }}>
+          <Typography variant="body1" gutterBottom>
+            Không thể tải dữ liệu định mức chiết khấu.
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate('/dinhmucck')}
+            sx={{ mt: 2 }}
+          >
+            Quay lại danh sách
+          </Button>
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ p: 3, maxWidth: 800, mx: 'auto' }}>
       <Snackbar
@@ -319,9 +455,9 @@ const DinhmucckCreatePage = () => {
 
       <FormHeader>
         <Box>
-          <FormTitle variant="h5">Thêm định mức chiết khấu mới</FormTitle>
+          <FormTitle variant="h5">Chỉnh sửa định mức chiết khấu</FormTitle>
           <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-            Nhập thông tin định mức chiết khấu cho sản phẩm
+            Cập nhật thông tin định mức chiết khấu cho sản phẩm
           </Typography>
         </Box>
         <Button
@@ -337,88 +473,57 @@ const DinhmucckCreatePage = () => {
         <StyledCard>
           <CardContent sx={{ p: 3 }}>
             <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <FormControl fullWidth error={!!errors.maspdv}>
-                  <InputLabel id="product-select-label">Sản phẩm/Dịch vụ</InputLabel>
-                  <Select
-                    labelId="product-select-label"
-                    id="product-select"
-                    value={formState.maspdv}
-                    name="maspdv"
-                    onChange={handleChange}
-                    label="Sản phẩm/Dịch vụ"
-                    disabled={loadingProducts}
-                    required
-                    size="medium"
-                  >
-                    {loadingProducts ? (
-                      <MenuItem value="" disabled>
-                        <CircularProgress size={20} sx={{ mr: 1 }} /> Đang tải...
-                      </MenuItem>
-                    ) : (
-                      [
-                        <MenuItem key="placeholder" value="" disabled>
-                          Chọn sản phẩm/dịch vụ
-                        </MenuItem>,
-                        ...(products && products.length > 0 ? products.map((product) => (
-                          <MenuItem key={product.maspdv} value={product.maspdv}>
-                            {product.tenspdv} ({product.maspdv})
-                          </MenuItem>
-                        )) : [])
-                      ]
-                    )}
-                  </Select>
-                  {errors.maspdv && <FormHelperText>{errors.maspdv}</FormHelperText>}
-                </FormControl>
-              </Grid>
-
-              {selectedProduct && (
+              {product && (
                 <Grid item xs={12}>
                   <ProductInfo>
-                    <Typography variant="subtitle2" color="primary" gutterBottom>
-                      Thông tin sản phẩm đã chọn
-                    </Typography>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                      <Typography variant="subtitle1" color="primary" fontWeight={600}>
+                        Thông tin sản phẩm
+                      </Typography>
+                      <Chip 
+                        label={`Mã: ${product.maspdv}`} 
+                        size="small" 
+                        color="primary" 
+                        variant="outlined"
+                      />
+                    </Box>
+                    <Divider sx={{ mb: 2 }} />
                     <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="body2" color="textSecondary">
-                          Mã sản phẩm:
+                      <Grid item xs={12}>
+                        <Typography variant="h6" fontWeight={500} gutterBottom>
+                          {product.tenspdv}
                         </Typography>
-                        <Chip 
-                          label={selectedProduct.maspdv} 
-                          size="small" 
-                          color="primary" 
-                          variant="outlined"
-                          sx={{ mt: 0.5 }}
-                        />
                       </Grid>
                       <Grid item xs={12} sm={6}>
                         <Typography variant="body2" color="textSecondary">
                           Đơn vị tính:
                         </Typography>
                         <Typography variant="body1">
-                          {selectedProduct.dvt}
+                          {product.dvt}
                         </Typography>
                       </Grid>
-                      <Grid item xs={12}>
-                        <Typography variant="body2" color="textSecondary">
-                          Tên sản phẩm:
-                        </Typography>
-                        <Typography variant="body1" fontWeight={500}>
-                          {selectedProduct.tenspdv}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="body2" color="textSecondary">
-                          Giá hiện tại:
-                        </Typography>
-                        <Typography variant="body1" color="primary" fontWeight={500}>
-                          {formatCurrency(selectedProduct.dongia)}
-                        </Typography>
-                      </Grid>
+                      {product.dongia !== undefined && (
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="body2" color="textSecondary">
+                            Giá hiện tại:
+                          </Typography>
+                          <Typography variant="body1" color="primary" fontWeight={500}>
+                            {formatCurrency(product.dongia)}
+                          </Typography>
+                        </Grid>
+                      )}
                     </Grid>
                   </ProductInfo>
                 </Grid>
               )}
+
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" color="primary" gutterBottom display="flex" alignItems="center">
+                  <EditIcon fontSize="small" sx={{ mr: 1 }} />
+                  Thông tin cần cập nhật
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+              </Grid>
 
               <Grid item xs={12} sm={6}>
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={vi}>
@@ -467,7 +572,6 @@ const DinhmucckCreatePage = () => {
                   required
                   variant="outlined"
                   size="medium"
-                  placeholder="0"
                 />
                 <FormHelperText>
                   Mức tiền tối thiểu để áp dụng chiết khấu
@@ -538,7 +642,7 @@ const DinhmucckCreatePage = () => {
             disabled={loading}
             color="primary"
           >
-            {loading ? 'Đang lưu...' : 'Lưu định mức'}
+            {loading ? 'Đang lưu...' : 'Lưu thay đổi'}
           </Button>
         </FormActions>
       </form>
@@ -546,4 +650,4 @@ const DinhmucckCreatePage = () => {
   );
 };
 
-export default DinhmucckCreatePage;
+export default DinhmucckEditPage; 

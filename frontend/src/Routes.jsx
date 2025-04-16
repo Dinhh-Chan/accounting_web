@@ -18,14 +18,17 @@ import KhachhangEditPage from './pages/khachhang/KhachhangEditPage';
 import SPDVListPage from './pages/spdv/SPDVListPage';
 import SPDVCreatePage from './pages/spdv/SPDVCreatePage';
 import SPDVEditPage from './pages/spdv/SPDVEditPage';
+import SPDVDetailPage from './pages/spdv/SPDVDetailPage';
 
 // Bảng giá
 import BanggiaListPage from './pages/banggia/BanggiaListPage';
 import BanggiaCreatePage from './pages/banggia/BanggiaCreatePage';
+import BanggiaEditPage from './pages/banggia/BanggiaEditPage';
 
 // Định mức chiết khấu
 import DinhmucckListPage from './pages/dinhmucck/DinhmucckListPage';
 import DinhmucckCreatePage from './pages/dinhmucck/DinhmucckCreatePage';
+import DinhmucckEditPage from './pages/dinhmucck/DinhmucckEditPage';
 
 // Hóa đơn
 import HoadonListPage from './pages/hoadon/HoadonListPage';
@@ -49,11 +52,12 @@ import NotFoundPage from './pages/NotFoundPage';
 
 // Route Guard - Yêu cầu đăng nhập để truy cập
 const PrivateRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth ? useAuth() : { isAuthenticated: true, loading: false };
+  // Không kiểm tra điều kiện, luôn gọi useAuth
+  const authData = useAuth();
   
-  // Trong môi trường phát triển, bạn có thể bỏ qua xác thực
-  // const isAuthenticated = true;
-  // const loading = false;
+  // Sau khi gọi hook, bạn có thể kiểm tra dữ liệu trả về
+  const isAuthenticated = authData?.isAuthenticated ?? true;
+  const loading = authData?.loading ?? false;
   
   if (loading) {
     return <div>Đang tải...</div>;
@@ -85,18 +89,21 @@ const AppRoutes = () => {
           <Route index element={<SPDVListPage />} />
           <Route path="create" element={<SPDVCreatePage />} />
           <Route path="edit/:id" element={<SPDVEditPage />} />
+          <Route path=":id" element={<SPDVDetailPage />} />
         </Route>
         
         {/* Bảng giá */}
         <Route path="banggia">
           <Route index element={<BanggiaListPage />} />
           <Route path="create" element={<BanggiaCreatePage />} />
+          <Route path="edit/:id" element={<BanggiaEditPage />} />
         </Route>
         
         {/* Định mức chiết khấu */}
         <Route path="dinhmucck">
           <Route index element={<DinhmucckListPage />} />
           <Route path="create" element={<DinhmucckCreatePage />} />
+          <Route path="edit/:maspdv/:date" element={<DinhmucckEditPage />} />
         </Route>
         
         {/* Hóa đơn */}

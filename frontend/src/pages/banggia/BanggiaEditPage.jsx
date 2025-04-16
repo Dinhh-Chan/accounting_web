@@ -9,32 +9,29 @@ import {
   Grid,
   InputAdornment,
   FormHelperText,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Select,
   Alert,
   CircularProgress,
   Snackbar,
   IconButton,
   Chip,
-  Slider,
-  Stack
+  Skeleton,
+  Divider
 } from '@mui/material';
 import {
   Save as SaveIcon,
   ArrowBack as ArrowBackIcon,
   CalendarMonth as CalendarIcon,
-  Percent as PercentIcon
+  Edit as EditIcon
 } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
 import { vi } from 'date-fns/locale';
 import axiosInstance from '../../utils/axios';
 import { API_ENDPOINTS } from '../../config/api';
+import { format, parseISO } from 'date-fns';
 
 const StyledCard = styled(Card)(({ theme }) => ({
   margin: theme.spacing(2, 0),
@@ -86,78 +83,91 @@ const ProductInfo = styled(Box)(({ theme }) => ({
 }));
 
 const formatCurrency = (amount) => {
-  if (!amount) return '';
+  if (!amount && amount !== 0) return '';
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 };
 
-const DinhmucckCreatePage = () => {
+const BanggiaEditPage = () => {
   const navigate = useNavigate();
+  const { id } = useParams(); // Lấy id từ URL
   const [formState, setFormState] = useState({
     maspdv: '',
     ngayhl: new Date(),
-    muctien: '',
-    tyleck: 0
+    giaban: ''
   });
+  const [originalData, setOriginalData] = useState(null);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [alert, setAlert] = useState({ show: false, message: '', severity: 'info' });
-  const [products, setProducts] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [product, setProduct] = useState(null);
 
-  // Tải danh sách sản phẩm
-  const fetchProducts = useCallback(async () => {
-    setLoadingProducts(true);
+  // Tải thông tin sản phẩm
+  const fetchProductData = async (productId) => {
     try {
-      const response = await axiosInstance.get(API_ENDPOINTS.PRODUCTS);
-      console.log('API Response:', response.data);
-      
-      if (Array.isArray(response.data)) {
-        setProducts(response.data);
-      } else if (response.data && Array.isArray(response.data.items)) {
-        setProducts(response.data.items);
-      } else {
-        console.error('Dữ liệu sản phẩm không đúng định dạng:', response.data);
-        setProducts([]);
-      }
+      const response = await axiosInstance.get(`${API_ENDPOINTS.PRODUCTS}/${productId}`);
+      setProduct(response.data);
     } catch (error) {
-      console.error('Lỗi khi tải danh sách sản phẩm:', error);
+      console.error('Lỗi khi tải thông tin sản phẩm:', error);
+      // Không chuyển hướng, chỉ hiển thị cảnh báo
       setAlert({
         show: true,
-        message: 'Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.',
+        message: 'Không thể tải thông tin sản phẩm.',
+        severity: 'warning'
+      });
+    }
+  };
+
+  // Tải thông tin bảng giá theo id
+  const fetchPriceData = useCallback(async () => {
+    setInitialLoading(true);
+    try {
+      const response = await axiosInstance.get(`${API_ENDPOINTS.PRICE_LIST}/${id}`);
+      const priceData = response.data;
+      
+      // Cập nhật state với dữ liệu từ API
+      setFormState({
+        maspdv: priceData.maspdv,
+        ngayhl: parseISO(priceData.ngayhl),
+        giaban: priceData.giaban.toString()
+      });
+      
+      setOriginalData(priceData);
+      
+      // Tải thông tin sản phẩm
+      fetchProductData(priceData.maspdv);
+    } catch (error) {
+      console.error('Lỗi khi tải thông tin bảng giá:', error);
+      setAlert({
+        show: true,
+        message: 'Không thể tải thông tin bảng giá. Vui lòng thử lại sau.',
         severity: 'error'
       });
-      setProducts([]);
+      // Quay lại trang danh sách nếu không tìm thấy dữ liệu
+      navigate('/banggia');
     } finally {
-      setLoadingProducts(false);
+      setInitialLoading(false);
     }
-  }, []);
+  }, [id, navigate, fetchProductData]);
 
   useEffect(() => {
-    // Tải danh sách sản phẩm khi component mount
-    fetchProducts();
-  }, [fetchProducts]);
+    // Tải thông tin bảng giá khi component mount
+    if (id) {
+      fetchPriceData();
+    }
+  }, [id, fetchPriceData]);
 
   // Xác thực form
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formState.maspdv) {
-      newErrors.maspdv = 'Vui lòng chọn sản phẩm';
-    }
-    
     if (!formState.ngayhl) {
       newErrors.ngayhl = 'Vui lòng chọn ngày hiệu lực';
     }
     
-    const thresholdAmount = parseFloat(formState.muctien);
-    if (isNaN(thresholdAmount) || thresholdAmount <= 0) {
-      newErrors.muctien = 'Mức tiền phải là số dương';
-    }
-    
-    const discountRate = parseFloat(formState.tyleck);
-    if (isNaN(discountRate) || discountRate <= 0 || discountRate > 100) {
-      newErrors.tyleck = 'Tỷ lệ chiết khấu phải là số dương từ 0 đến 100';
+    const price = parseFloat(formState.giaban);
+    if (isNaN(price) || price <= 0) {
+      newErrors.giaban = 'Giá bán phải là số dương';
     }
     
     setErrors(newErrors);
@@ -173,12 +183,6 @@ const DinhmucckCreatePage = () => {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
     }
-
-    // Nếu thay đổi sản phẩm, cập nhật selectedProduct
-    if (name === 'maspdv') {
-      const product = products.find(p => p.maspdv === value);
-      setSelectedProduct(product);
-    }
   };
 
   // Xử lý thay đổi ngày
@@ -188,15 +192,6 @@ const DinhmucckCreatePage = () => {
     // Xóa lỗi khi người dùng nhập lại
     if (errors.ngayhl) {
       setErrors(prev => ({ ...prev, ngayhl: null }));
-    }
-  };
-
-  // Xử lý thay đổi slider
-  const handleSliderChange = (event, newValue) => {
-    setFormState(prev => ({ ...prev, tyleck: newValue }));
-    
-    if (errors.tyleck) {
-      setErrors(prev => ({ ...prev, tyleck: null }));
     }
   };
 
@@ -211,39 +206,35 @@ const DinhmucckCreatePage = () => {
     
     setLoading(true);
     try {
-      // Định dạng dữ liệu để gửi
+      // Định dạng dữ liệu để gửi - Sử dụng đối tượng Date trực tiếp
       const formData = {
-        maspdv: formState.maspdv,
-        ngayhl: new Date(formState.ngayhl.getFullYear(), 
-                        formState.ngayhl.getMonth(), 
-                        formState.ngayhl.getDate(),
-                        0, 0, 0).toISOString().replace('Z', ''),
-        muctien: parseFloat(formState.muctien),
-        tyleck: parseFloat(formState.tyleck)
+        ...originalData,
+        ngayhl: formState.ngayhl, // Gửi đối tượng Date trực tiếp
+        giaban: parseFloat(formState.giaban)
       };
       
-      console.log("Gửi dữ liệu:", formData);
+      console.log("Gửi dữ liệu cập nhật:", formData);
       
-      // Gửi request tạo mới
-      const response = await axiosInstance.post(API_ENDPOINTS.DISCOUNT_RATES, formData);
+      // Gửi request cập nhật
+      const response = await axiosInstance.put(`${API_ENDPOINTS.PRICE_LIST}/${id}`, formData);
       console.log("Phản hồi API:", response.data);
       
       // Hiển thị thông báo thành công
       setAlert({
         show: true,
-        message: 'Thêm định mức chiết khấu thành công!',
+        message: 'Cập nhật bảng giá thành công!',
         severity: 'success'
       });
       
       // Quay lại trang danh sách sau 1 giây
       setTimeout(() => {
-        navigate('/dinhmucck');
+        navigate('/banggia');
       }, 1000);
     } catch (error) {
-      console.error('Lỗi khi tạo định mức chiết khấu:', error);
+      console.error('Lỗi khi cập nhật bảng giá:', error);
       
       // Hiển thị thông báo lỗi chi tiết hơn
-      let errorMsg = 'Lỗi khi tạo định mức chiết khấu. Vui lòng thử lại.';
+      let errorMsg = 'Lỗi khi cập nhật bảng giá. Vui lòng thử lại.';
       
       if (error.response) {
         // Lỗi có phản hồi từ server
@@ -296,9 +287,19 @@ const DinhmucckCreatePage = () => {
     }
   };
 
-  const formatSliderValue = (value) => {
-    return `${value}%`;
-  };
+  // Hiển thị skeleton khi đang tải
+  if (initialLoading) {
+    return (
+      <Box sx={{ p: 3, maxWidth: 800, mx: 'auto' }}>
+        <Skeleton variant="rectangular" width="40%" height={40} sx={{ mb: 2 }} />
+        <Skeleton variant="rectangular" width="100%" height={300} sx={{ borderRadius: 2 }} />
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3, gap: 2 }}>
+          <Skeleton variant="rectangular" width={100} height={40} />
+          <Skeleton variant="rectangular" width={120} height={40} />
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3, maxWidth: 800, mx: 'auto' }}>
@@ -319,14 +320,14 @@ const DinhmucckCreatePage = () => {
 
       <FormHeader>
         <Box>
-          <FormTitle variant="h5">Thêm định mức chiết khấu mới</FormTitle>
+          <FormTitle variant="h5">Chỉnh sửa giá sản phẩm</FormTitle>
           <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-            Nhập thông tin định mức chiết khấu cho sản phẩm
+            Cập nhật thông tin giá cho sản phẩm/dịch vụ
           </Typography>
         </Box>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/dinhmucck')}
+          onClick={() => navigate('/banggia')}
           variant="outlined"
         >
           Quay lại
@@ -337,88 +338,57 @@ const DinhmucckCreatePage = () => {
         <StyledCard>
           <CardContent sx={{ p: 3 }}>
             <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <FormControl fullWidth error={!!errors.maspdv}>
-                  <InputLabel id="product-select-label">Sản phẩm/Dịch vụ</InputLabel>
-                  <Select
-                    labelId="product-select-label"
-                    id="product-select"
-                    value={formState.maspdv}
-                    name="maspdv"
-                    onChange={handleChange}
-                    label="Sản phẩm/Dịch vụ"
-                    disabled={loadingProducts}
-                    required
-                    size="medium"
-                  >
-                    {loadingProducts ? (
-                      <MenuItem value="" disabled>
-                        <CircularProgress size={20} sx={{ mr: 1 }} /> Đang tải...
-                      </MenuItem>
-                    ) : (
-                      [
-                        <MenuItem key="placeholder" value="" disabled>
-                          Chọn sản phẩm/dịch vụ
-                        </MenuItem>,
-                        ...(products && products.length > 0 ? products.map((product) => (
-                          <MenuItem key={product.maspdv} value={product.maspdv}>
-                            {product.tenspdv} ({product.maspdv})
-                          </MenuItem>
-                        )) : [])
-                      ]
-                    )}
-                  </Select>
-                  {errors.maspdv && <FormHelperText>{errors.maspdv}</FormHelperText>}
-                </FormControl>
-              </Grid>
-
-              {selectedProduct && (
+              {product && (
                 <Grid item xs={12}>
                   <ProductInfo>
-                    <Typography variant="subtitle2" color="primary" gutterBottom>
-                      Thông tin sản phẩm đã chọn
-                    </Typography>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                      <Typography variant="subtitle1" color="primary" fontWeight={600}>
+                        Thông tin sản phẩm
+                      </Typography>
+                      <Chip 
+                        label={`Mã: ${product.maspdv}`} 
+                        size="small" 
+                        color="primary" 
+                        variant="outlined"
+                      />
+                    </Box>
+                    <Divider sx={{ mb: 2 }} />
                     <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="body2" color="textSecondary">
-                          Mã sản phẩm:
+                      <Grid item xs={12}>
+                        <Typography variant="h6" fontWeight={500} gutterBottom>
+                          {product.tenspdv}
                         </Typography>
-                        <Chip 
-                          label={selectedProduct.maspdv} 
-                          size="small" 
-                          color="primary" 
-                          variant="outlined"
-                          sx={{ mt: 0.5 }}
-                        />
                       </Grid>
                       <Grid item xs={12} sm={6}>
                         <Typography variant="body2" color="textSecondary">
                           Đơn vị tính:
                         </Typography>
                         <Typography variant="body1">
-                          {selectedProduct.dvt}
+                          {product.dvt}
                         </Typography>
                       </Grid>
-                      <Grid item xs={12}>
-                        <Typography variant="body2" color="textSecondary">
-                          Tên sản phẩm:
-                        </Typography>
-                        <Typography variant="body1" fontWeight={500}>
-                          {selectedProduct.tenspdv}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="body2" color="textSecondary">
-                          Giá hiện tại:
-                        </Typography>
-                        <Typography variant="body1" color="primary" fontWeight={500}>
-                          {formatCurrency(selectedProduct.dongia)}
-                        </Typography>
-                      </Grid>
+                      {product.dongia !== undefined && (
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="body2" color="textSecondary">
+                            Giá hiện tại:
+                          </Typography>
+                          <Typography variant="body1" color="primary" fontWeight={500}>
+                            {formatCurrency(product.dongia)}
+                          </Typography>
+                        </Grid>
+                      )}
                     </Grid>
                   </ProductInfo>
                 </Grid>
               )}
+
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" color="primary" gutterBottom display="flex" alignItems="center">
+                  <EditIcon fontSize="small" sx={{ mr: 1 }} />
+                  Thông tin cần cập nhật
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+              </Grid>
 
               <Grid item xs={12} sm={6}>
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={vi}>
@@ -447,77 +417,29 @@ const DinhmucckCreatePage = () => {
                   />
                 </LocalizationProvider>
                 <FormHelperText>
-                  Ngày áp dụng định mức chiết khấu cho sản phẩm
+                  Ngày áp dụng giá mới cho sản phẩm
                 </FormHelperText>
               </Grid>
 
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="Mức tiền"
-                  name="muctien"
+                  label="Giá bán"
+                  name="giaban"
                   type="number"
-                  value={formState.muctien}
+                  value={formState.giaban}
                   onChange={handleChange}
-                  error={!!errors.muctien}
-                  helperText={errors.muctien}
+                  error={!!errors.giaban}
+                  helperText={errors.giaban}
                   InputProps={{
                     endAdornment: <InputAdornment position="end">VND</InputAdornment>,
                   }}
                   required
                   variant="outlined"
                   size="medium"
-                  placeholder="0"
                 />
                 <FormHelperText>
-                  Mức tiền tối thiểu để áp dụng chiết khấu
-                </FormHelperText>
-              </Grid>
-
-              <Grid item xs={12}>
-                <Typography id="discount-rate-slider" gutterBottom>
-                  Tỷ lệ chiết khấu: {isNaN(formState.tyleck) ? 0 : formState.tyleck}%
-                </Typography>
-                <Stack spacing={2} direction="row" sx={{ mb: 1, px: 1 }} alignItems="center">
-                  <PercentIcon color="primary" fontSize="small" />
-                  <Slider
-                    aria-labelledby="discount-rate-slider"
-                    value={isNaN(formState.tyleck) ? 0 : formState.tyleck}
-                    onChange={handleSliderChange}
-                    valueLabelDisplay="auto"
-                    valueLabelFormat={formatSliderValue}
-                    step={0.5}
-                    marks
-                    min={0}
-                    max={100}
-                    color="primary"
-                  />
-                  <TextField
-                    variant="outlined"
-                    value={isNaN(formState.tyleck) ? 0 : formState.tyleck}
-                    onChange={(e) => {
-                      const value = parseFloat(e.target.value);
-                      if (!isNaN(value) && value >= 0 && value <= 100) {
-                        setFormState(prev => ({ ...prev, tyleck: value }));
-                      }
-                    }}
-                    InputProps={{
-                      endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                    }}
-                    inputProps={{
-                      step: 0.5,
-                      min: 0,
-                      max: 100,
-                      type: 'number',
-                    }}
-                    size="small"
-                    sx={{ width: 100 }}
-                    error={!!errors.tyleck}
-                  />
-                </Stack>
-                {errors.tyleck && <FormHelperText error>{errors.tyleck}</FormHelperText>}
-                <FormHelperText>
-                  Phần trăm chiết khấu áp dụng khi đạt mức tiền
+                  Giá bán chưa bao gồm thuế
                 </FormHelperText>
               </Grid>
             </Grid>
@@ -527,7 +449,7 @@ const DinhmucckCreatePage = () => {
         <FormActions>
           <Button
             variant="outlined"
-            onClick={() => navigate('/dinhmucck')}
+            onClick={() => navigate('/banggia')}
           >
             Hủy
           </Button>
@@ -538,7 +460,7 @@ const DinhmucckCreatePage = () => {
             disabled={loading}
             color="primary"
           >
-            {loading ? 'Đang lưu...' : 'Lưu định mức'}
+            {loading ? 'Đang lưu...' : 'Lưu thay đổi'}
           </Button>
         </FormActions>
       </form>
@@ -546,4 +468,4 @@ const DinhmucckCreatePage = () => {
   );
 };
 
-export default DinhmucckCreatePage;
+export default BanggiaEditPage; 
