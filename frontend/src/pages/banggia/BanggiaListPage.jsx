@@ -39,6 +39,8 @@ import { styled } from '@mui/material/styles';
 import axiosInstance from '../../utils/axios';
 import { API_ENDPOINTS } from '../../config/api';
 import { format as formatDate } from 'date-fns';
+import { vi } from 'date-fns/locale';
+import BanggiaModal from '../../components/banggia/BanggiaModal';
 
 const HeaderBox = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -92,6 +94,10 @@ const BanggiaListPage = () => {
   const [productFilter, setProductFilter] = useState('');
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [products, setProducts] = useState([]);
+
+  // State cho modal thêm/sửa bảng giá
+  const [modalVisible, setModalVisible] = useState(false);
+  const [currentId, setCurrentId] = useState(null);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -196,7 +202,8 @@ const BanggiaListPage = () => {
   });
 
   const handleAddClick = () => {
-    navigate('/banggia/create');
+    setCurrentId(null);
+    setModalVisible(true);
   };
 
   const handleFilterClick = () => {
@@ -297,15 +304,25 @@ const BanggiaListPage = () => {
   };
 
   const handleEditClick = (item) => {
-    // Định dạng ngày để phù hợp với URL - chỉ sử dụng ID
     const id = item.id || item._id;
-    if (id) {
-      navigate(`/banggia/edit/${id}`);
-    } else {
-      // Dùng cách khác nếu không có id - sử dụng format để hiển thị trong URL
-      const dateStr = formatDate(new Date(item.ngayhl), "yyyy-MM-dd");
-      navigate(`/banggia/edit/${item.maspdv}/${dateStr}`);
-    }
+    setCurrentId(id || `${item.maspdv}/${item.ngayhl}`);
+    setModalVisible(true);
+  };
+
+  // Xử lý khi đóng modal
+  const handleModalCancel = () => {
+    setModalVisible(false);
+    setCurrentId(null);
+  };
+
+  // Xử lý khi lưu thành công từ modal
+  const handleModalSuccess = () => {
+    fetchBangGia();
+    setSnackbar({
+      open: true,
+      message: currentId ? 'Cập nhật bảng giá thành công' : 'Thêm bảng giá mới thành công',
+      severity: 'success'
+    });
   };
 
   return (
@@ -414,7 +431,7 @@ const BanggiaListPage = () => {
                     <TableCell align="center">
                       <Chip
                         icon={<CalendarIcon fontSize="small" />}
-                        label={formatDate(item.ngayhl)}
+                        label={formatDate(new Date(item.ngayhl), "dd/MM/yyyy")}
                         size="small"
                         color="default"
                       />
@@ -507,7 +524,7 @@ const BanggiaListPage = () => {
         <DialogTitle>Xác nhận xóa bảng giá</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {selectedItem && `Bạn có chắc chắn muốn xóa giá sản phẩm "${selectedItem.maspdv}" áp dụng từ ngày ${formatDate(selectedItem.ngayhl)}?`}
+            {selectedItem && `Bạn có chắc chắn muốn xóa giá sản phẩm "${selectedItem.maspdv}" áp dụng từ ngày ${formatDate(new Date(selectedItem.ngayhl), "dd/MM/yyyy")}?`}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -517,6 +534,14 @@ const BanggiaListPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Modal Banggia */}
+      <BanggiaModal
+        open={modalVisible}
+        id={currentId}
+        onCancel={handleModalCancel}
+        onSuccess={handleModalSuccess}
+      />
 
       {/* Snackbar */}
       <Snackbar

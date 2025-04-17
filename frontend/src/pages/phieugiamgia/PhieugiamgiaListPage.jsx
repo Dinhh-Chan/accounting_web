@@ -45,6 +45,7 @@ import axiosInstance from '../../utils/axios';
 import { API_ENDPOINTS } from '../../config/api';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import PhieugiamgiaModal from '../../components/phieugiamgia/PhieugiamgiaModal';
 
 const HeaderBox = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -116,6 +117,10 @@ const PhieugiamgiaListPage = () => {
     message: '',
     severity: 'success'
   });
+  
+  // State cho modal
+  const [modalVisible, setModalVisible] = useState(false);
+  const [currentSophieu, setCurrentSophieu] = useState(null);
   
   // Filter state
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
@@ -245,8 +250,27 @@ const PhieugiamgiaListPage = () => {
     );
   });
 
+  // Mở modal tạo phiếu giảm giá
   const handleAddClick = () => {
-    navigate('/phieugiamgia/create');
+    setCurrentSophieu(null);
+    setModalVisible(true);
+  };
+
+  // Mở modal sửa phiếu giảm giá
+  const handleEditClick = (sophieu) => {
+    setCurrentSophieu(sophieu);
+    setModalVisible(true);
+  };
+
+  // Đóng modal
+  const handleModalCancel = () => {
+    setModalVisible(false);
+    setCurrentSophieu(null);
+  };
+
+  // Xử lý khi lưu phiếu thành công
+  const handleModalSuccess = () => {
+    refreshData();
   };
 
   const handleFilterClick = () => {
@@ -340,10 +364,6 @@ const PhieugiamgiaListPage = () => {
 
   const handleViewDetails = (sophieu) => {
     navigate(`/phieugiamgia/${sophieu}`);
-  };
-
-  const handleEditClick = (sophieu) => {
-    navigate(`/phieugiamgia/edit/${sophieu}`);
   };
 
   return (
@@ -619,6 +639,14 @@ const PhieugiamgiaListPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Modal phiếu giảm giá */}
+      <PhieugiamgiaModal
+        open={modalVisible}
+        sophieu={currentSophieu}
+        onCancel={handleModalCancel}
+        onSuccess={handleModalSuccess}
+      />
 
       <Snackbar
         open={snackbar.open}

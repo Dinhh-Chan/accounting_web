@@ -36,6 +36,7 @@ import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../utils/axios';
 import { API_ENDPOINTS } from '../../config/api';
 import { styled } from '@mui/material/styles';
+import SPDVModal from '../../components/spdv/SPDVModal';
 
 const HeaderBox = styled(Box)(({ theme }) => ({
   display: 'flex',
@@ -83,6 +84,10 @@ const SPDVListPage = () => {
     message: '',
     severity: 'success'
   });
+  
+  // State cho modal
+  const [modalVisible, setModalVisible] = useState(false);
+  const [currentMaspdv, setCurrentMaspdv] = useState(null);
 
   useEffect(() => {
     fetchSPDVs();
@@ -143,12 +148,32 @@ const SPDVListPage = () => {
     setPage(0);
   };
 
+  // Mở modal thêm sản phẩm mới
   const handleAddClick = () => {
-    navigate('/spdv/create');
+    setCurrentMaspdv(null);
+    setModalVisible(true);
   };
 
+  // Mở modal chỉnh sửa sản phẩm
   const handleEditClick = (maspdv) => {
-    navigate(`/spdv/edit/${maspdv}`);
+    setCurrentMaspdv(maspdv);
+    setModalVisible(true);
+  };
+
+  // Đóng modal
+  const handleModalCancel = () => {
+    setModalVisible(false);
+    setCurrentMaspdv(null);
+  };
+  
+  // Xử lý khi lưu sản phẩm thành công
+  const handleModalSuccess = () => {
+    fetchSPDVs();
+    setSnackbar({
+      open: true,
+      message: currentMaspdv ? 'Cập nhật sản phẩm thành công' : 'Thêm sản phẩm mới thành công',
+      severity: 'success'
+    });
   };
 
   const handleViewClick = (maspdv) => {
@@ -316,6 +341,14 @@ const SPDVListPage = () => {
           }
         />
       </StyledTableContainer>
+
+      {/* Modal sản phẩm */}
+      <SPDVModal
+        open={modalVisible}
+        maspdv={currentMaspdv}
+        onCancel={handleModalCancel}
+        onSuccess={handleModalSuccess}
+      />
 
       {/* Dialog xác nhận xóa */}
       <Dialog

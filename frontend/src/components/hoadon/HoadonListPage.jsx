@@ -6,6 +6,7 @@ import axios from 'axios';
 import moment from 'moment';
 import locale from 'antd/es/date-picker/locale/vi_VN';
 import { formatCurrency, formatDateTime } from '../../utils/format';
+import HoadonModal from './HoadonModal';
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
@@ -17,6 +18,10 @@ const HoadonListPage = () => {
   const [dateRange, setDateRange] = useState([moment().startOf('month'), moment()]);
   const [searchText, setSearchText] = useState('');
   const [filteredData, setFilteredData] = useState([]);
+  
+  // Thêm trạng thái cho modal
+  const [modalVisible, setModalVisible] = useState(false);
+  const [currentSoct, setCurrentSoct] = useState(null);
   
   // Tải danh sách hóa đơn
   const fetchData = async () => {
@@ -83,14 +88,27 @@ const HoadonListPage = () => {
     navigate(`/hoadon/${soct}`);
   };
   
-  // Chỉnh sửa hóa đơn
+  // Mở modal chỉnh sửa hóa đơn
   const handleEdit = (soct) => {
-    navigate(`/hoadon/edit/${soct}`);
+    setCurrentSoct(soct);
+    setModalVisible(true);
   };
   
-  // Tạo hóa đơn mới
+  // Tạo hóa đơn mới bằng modal
   const handleCreate = () => {
-    navigate('/hoadon/create');
+    setCurrentSoct(null);
+    setModalVisible(true);
+  };
+  
+  // Đóng modal
+  const handleModalCancel = () => {
+    setModalVisible(false);
+    setCurrentSoct(null);
+  };
+  
+  // Xử lý khi lưu hóa đơn thành công
+  const handleModalSuccess = () => {
+    fetchData();
   };
   
   // Xóa hóa đơn
@@ -269,6 +287,14 @@ const HoadonListPage = () => {
             showTotal: (total) => `Tổng số ${total} hóa đơn`,
           }}
           scroll={{ x: 1200 }}
+        />
+        
+        {/* Modal form hóa đơn */}
+        <HoadonModal
+          open={modalVisible}
+          soct={currentSoct}
+          onCancel={handleModalCancel}
+          onSuccess={handleModalSuccess}
         />
       </Space>
     </Card>

@@ -22,6 +22,7 @@ export const API_ENDPOINTS = {
   // Tài khoản kế toán
   ACCOUNTS: `${API_URL}/api/${API_VERSION}/tkkt`,
   ACCOUNT_DETAIL: (id) => `${API_URL}/api/${API_VERSION}/tkkt/${id}`,
+  TKKT: `${API_URL}/api/${API_VERSION}/tkkt`,
   
   // Hóa đơn
   INVOICES: `${API_URL}/api/${API_VERSION}/hoadon`,

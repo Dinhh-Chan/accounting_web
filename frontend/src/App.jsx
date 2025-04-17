@@ -15,7 +15,6 @@ import KhachhangListPage from './pages/khachhang/KhachhangListPage';
 import KhachhangCreatePage from './pages/khachhang/KhachhangCreatePage';
 import KhachhangEditPage from './pages/khachhang/KhachhangEditPage';
 import HoadonListPage from './components/hoadon/HoadonListPage';
-import HoadonFormPage from './components/hoadon/HoadonFormPage';
 import HoadonDetailPage from './components/hoadon/HoadonDetailPage';
 
 // Protected Route component
@@ -87,26 +86,6 @@ function App() {
                     <ProtectedRoute>
                       <Layout>
                         <HoadonListPage />
-                      </Layout>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/hoadon/create"
-                  element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <HoadonFormPage />
-                      </Layout>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/hoadon/edit/:soct"
-                  element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <HoadonFormPage />
                       </Layout>
                     </ProtectedRoute>
                   }

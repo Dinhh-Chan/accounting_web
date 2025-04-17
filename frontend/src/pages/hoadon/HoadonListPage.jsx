@@ -32,6 +32,7 @@ import axios from 'axios';
 import { API_ENDPOINTS } from '../../config/api';
 import { formatDate, formatCurrency } from '../../utils/formatters';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
+import HoadonModal from '../../components/hoadon/HoadonModal';
 
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
   boxShadow: '0px 3px 6px rgba(0, 0, 0, 0.1)',
@@ -109,6 +110,10 @@ const HoadonListPage = () => {
     content: '',
     onConfirm: null
   });
+  
+  // State cho modal hóa đơn
+  const [modalVisible, setModalVisible] = useState(false);
+  const [currentSoct, setCurrentSoct] = useState(null);
 
   useEffect(() => {
     fetchHoadons();
@@ -151,8 +156,27 @@ const HoadonListPage = () => {
     navigate(`/hoadon/${id}`);
   };
 
+  // Mở modal chỉnh sửa hóa đơn
   const handleEditHoadon = (id) => {
-    navigate(`/hoadon/edit/${id}`);
+    setCurrentSoct(id);
+    setModalVisible(true);
+  };
+
+  // Mở modal tạo hóa đơn mới
+  const handleAddHoadon = () => {
+    setCurrentSoct(null);
+    setModalVisible(true);
+  };
+
+  // Đóng modal
+  const handleModalCancel = () => {
+    setModalVisible(false);
+    setCurrentSoct(null);
+  };
+
+  // Xử lý khi lưu hóa đơn thành công
+  const handleModalSuccess = () => {
+    fetchHoadons();
   };
 
   const handlePrintHoadon = (id) => {
@@ -207,7 +231,7 @@ const HoadonListPage = () => {
             variant="contained"
             color="primary"
             startIcon={<AddIcon />}
-            onClick={() => navigate('/hoadon/create')}
+            onClick={handleAddHoadon}
           >
             Tạo hóa đơn
           </ActionButton>
@@ -300,6 +324,14 @@ const HoadonListPage = () => {
           }
         />
       </StyledTableContainer>
+      
+      {/* Modal hóa đơn */}
+      <HoadonModal
+        open={modalVisible}
+        soct={currentSoct}
+        onCancel={handleModalCancel}
+        onSuccess={handleModalSuccess}
+      />
       
       <ConfirmDialog
         open={confirmDialog.open}
